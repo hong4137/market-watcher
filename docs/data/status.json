@@ -1,0 +1,37 @@
+{
+ "updated_utc": "2026-08-03T14:38:52.181869Z",
+ "date": "2026-07-31",
+ "ndx": 28274.2,
+ "ret1_pct": 0.6,
+ "cum3_pct": 1.84,
+ "event": false,
+ "vix": 15.99,
+ "alarms": {
+  "vix28_regime": false,
+  "vix35_confirm": false,
+  "vix_1y_pctile": 24,
+  "vix_rel_jump_pctile": 14.8,
+  "smh_gap": -0.29,
+  "nsp": 94,
+  "svr_rel": 65,
+  "equity_pc": 0.63,
+  "dealer_net": -27581,
+  "rule_momentum": false,
+  "rule_s1_squeeze": false
+ },
+ "collect_log": [
+  "NDX(FRED) ok ~2026-07-31",
+  "VIX(Cboe) ok ~2026-07-31",
+  "SMH(야후) ok ~2026-08-03",
+  "COT ok ~2026-07-28",
+  "FINRA SVR +10 ~2026-07-31",
+  "P/C +5 ~2026-07-31"
+ ],
+ "footnotes": {
+  "vix28": "#070: 신호의 몸통은 국면 자체 — 하락과 함께 국면 갓 진입한 첫날은 68%. 하락 첫날 즉시 매수 금지.",
+  "vix35": "#072: 발동 시 10일 내 ±2% 사건 사실상 확정(11/11). 재현율 낮음 — 침묵은 무주장.",
+  "vix_1y": "#083: >=90 = 상대 공포 국면(사건률 72~100%). 무전조 캄 크래시는 사각.",
+  "smh_gap": "#085: 동시 판독 전용(전조 아님). 저VIX 체제에서 사건 유형 감별 최강(6.3배).",
+  "rules": "#070: G 판정식은 사후 원인 분류 전용 — 예측 신호로 사용 금지."
+ }
+}
