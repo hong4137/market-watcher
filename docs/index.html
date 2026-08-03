@@ -6,41 +6,39 @@
 <title>NDX Watch</title>
 <style>
  :root{--bg:#0d1117;--card:#161b22;--line:#30363d;--txt:#e6edf3;--dim:#8b949e;
-       --up:#3fb950;--down:#f85149;--warn:#d29922;--ok:#2ea043}
+       --up:#3fb950;--down:#f85149;--warn:#d29922}
  *{box-sizing:border-box}
  body{font-family:-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);
-      margin:0;padding:14px;max-width:640px;margin:auto;line-height:1.5}
+      margin:0;padding:14px;max-width:680px;margin:auto;line-height:1.5}
  h1{font-size:1.1em;margin:0 0 2px;letter-spacing:.5px}
- .sub{font-size:.75em;color:var(--dim);margin-bottom:14px}
- .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
- .verdict{text-align:center;padding:22px 16px}
- .vbig{font-size:1.5em;font-weight:700;margin-bottom:4px}
- .vsub{font-size:.85em;color:var(--dim)}
- .price{font-size:2.2em;font-weight:700;letter-spacing:-1px}
- .chg{font-size:1.1em;font-weight:600}
+ .sub{font-size:.75em;color:var(--dim);margin-bottom:12px}
+ .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:10px 0}
+ .verdict{text-align:center;padding:18px 16px}
+ .vbig{font-size:1.35em;font-weight:700;margin-bottom:4px}
+ .vsub{font-size:.82em;color:var(--dim);max-width:520px;margin:auto}
+ .price{font-size:2em;font-weight:700;letter-spacing:-1px}
  .up{color:var(--up)}.down{color:var(--down)}.warn{color:var(--warn)}.dim{color:var(--dim)}
- .row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #21262d}
- .row:last-child{border-bottom:0}
- .rl{flex:1}
- .rname{font-weight:600;font-size:.95em}
- .rdesc{font-size:.76em;color:var(--dim);margin-top:2px}
- .rv{text-align:right;min-width:96px}
- .rnum{font-size:1.15em;font-weight:700;font-variant-numeric:tabular-nums}
- .tag{display:inline-block;font-size:.7em;padding:1px 7px;border-radius:9px;margin-top:3px}
- .t-ok{background:#2ea04322;color:#3fb950}
- .t-warn{background:#d2992222;color:#d29922}
- .t-hot{background:#f8514922;color:#f85149}
- .t-off{background:#8b949e18;color:#6e7681}
- h2{font-size:.85em;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin:0 0 8px;font-weight:600}
- table{width:100%;border-collapse:collapse;font-size:.85em;font-variant-numeric:tabular-nums}
- th{color:var(--dim);font-weight:500;font-size:.85em}
- td,th{padding:7px 4px;border-bottom:1px solid #21262d;text-align:right}
+ .prow{display:flex;justify-content:space-between;align-items:flex-end}
+ h2{font-size:.8em;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin:0 0 6px;font-weight:600}
+ .grammar{font-size:.76em;color:var(--dim);line-height:1.55;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #21262d}
+ .grow{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #21262d;gap:10px}
+ .grow:last-child{border-bottom:0}
+ .gname{font-size:.88em;font-weight:600}
+ .gread{font-size:.73em;color:var(--dim);margin-top:1px}
+ .gval{font-size:1.05em;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+ .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:7px;vertical-align:1px}
+ .d-ok{background:#2ea043}.d-warn{background:#d29922}.d-hot{background:#f85149}.d-na{background:#484f58}
+ table{width:100%;border-collapse:collapse;font-size:.83em;font-variant-numeric:tabular-nums}
+ th{color:var(--dim);font-weight:500}
+ td,th{padding:6px 4px;border-bottom:1px solid #21262d;text-align:right}
  td:first-child,th:first-child{text-align:left}
- details{margin-top:10px}
- summary{cursor:pointer;font-size:.82em;color:#58a6ff;padding:6px 0}
- .note{font-size:.78em;color:var(--dim);line-height:1.75;margin-top:8px}
+ details summary{cursor:pointer;font-size:.8em;color:#58a6ff;padding:5px 0}
+ .note{font-size:.76em;color:var(--dim);line-height:1.7;margin-top:6px}
  .note b{color:#c9d1d9}
+ .tag{display:inline-block;font-size:.68em;padding:1px 8px;border-radius:9px}
+ .t-hot{background:#f8514922;color:#f85149}
  #err{color:var(--down);font-size:.85em}
+ .legend{font-size:.72em;color:var(--dim);margin:4px 0 0;text-align:right}
 </style>
 </head>
 <body>
@@ -49,135 +47,83 @@
 <div class="sub" id="sub">불러오는 중…</div>
 <div id="err"></div>
 
-<!-- 1. 한 줄 판정 -->
 <div class="card verdict" id="verdict"></div>
-
-<!-- 2. 시세 -->
 <div class="card" id="priceCard"></div>
+<div class="card" id="monthly"></div>
 
-<!-- 3. 경보 -->
-<div class="card">
- <h2>경보 — 발동 시에만 행동</h2>
- <div id="alarms"></div>
- <details>
-  <summary>경보 각주 (반드시 함께 읽을 것)</summary>
-  <div class="note" id="fns"></div>
- </details>
-</div>
+<div class="legend">● 초록 중립 · ● 노랑 경계 · ● 빨강 발동 · ● 회색 결측/휴면</div>
+<div id="panels"></div>
 
-<!-- 4. 계기판 -->
-<div class="card">
- <h2>계기판 — 상황 파악용</h2>
- <div id="gauges"></div>
-</div>
-
-<!-- 5. 이력 -->
 <div class="card">
  <h2>최근 채점</h2>
  <table id="hist"></table>
- <div class="note">사건 = 일간 ±2% 또는 3거래일 누적 ±5%. 조용한 날의 침묵도 채점 대상(특이도).</div>
+ <div class="note">사건 = 일간 ±2% 또는 3거래일 누적 ±5%. 침묵도 채점 대상.</div>
 </div>
 
-<!-- 6. 읽는 법 -->
-<div class="card">
- <details>
-  <summary>■ 이 화면 읽는 법</summary>
-  <div class="note">
-  <b>1) 맨 위 한 줄만 봐도 됩니다.</b> 초록 = 평시(할 일 없음), 노랑 = 국면 진입(주시), 빨강 = 사건 발생(세션 열어 태깅).<br><br>
-  <b>2) 경보와 계기판은 역할이 다릅니다.</b><br>
-  · <b>경보</b>는 발동해야 의미가 있습니다. 침묵은 "안전"이 아니라 <i>무주장</i>입니다 — 재현율이 낮은 확진형 신호라 대부분의 날은 꺼져 있는 게 정상입니다.<br>
-  · <b>계기판</b>은 항상 켜져 있는 상황판입니다. 사건이 터졌을 때 <i>어떤 종류의 사건인지</i> 감별하는 데 씁니다(예: smh_gap이 크게 음수면 반도체발).<br><br>
-  <b>3) 이 대시보드는 예측기가 아닙니다.</b> 사건 <i>이후</i> 빠른 명세·감별이 1급 임무이고, 사전 경보는 확진형(VIX≥35 등)만 신뢰합니다. 저변동 상태에서 갑자기 터지는 '캄 크래시'는 현재 어떤 게이지도 못 잡습니다(#084, 미해결 사각).<br><br>
-  <b>4) 사건이 뜨면</b> 폰에 푸시가 오고 리포에 브리핑 카드(.md)가 생깁니다. 원인 태깅은 기계가 하지 않습니다 — 수치만으로 원인 역추적 정확도는 35%(#077)로 실측됐기 때문입니다.
-  </div>
- </details>
-</div>
+<div class="card"><details>
+ <summary>■ 이 화면 읽는 법</summary>
+ <div class="note">
+ <b>설계 철학:</b> 이 상황판은 예측 기계가 아닙니다. 각 칸(사건 원인 카테고리)마다 연구로 확정된 관련 계기를 펼쳐놓은 것이고, 최종 판단은 사람이 계기들을 종합해서 내립니다.<br><br>
+ <b>칸이란:</b> 353건의 사건을 원인별로 분류한 8개 그룹입니다(A 통화정책 85건 · B 거시지표 68건 · C 지정학 75건 · E 실적 49건 · F 정책 44건 · G 수급 21건 등). 각 칸에는 그 칸 사건들이 공통으로 보이는 '용량계'(사건의 크기를 재는 수치)가 붙어 있습니다.<br><br>
+ <b>쓰는 법 (평시):</b> 노랑·빨강 점이 몰리는 칸이 지금 긴장이 쌓이는 자리입니다. 예: C칸의 달러·유가가 동시에 노랑이면 지정학 쪽 용량이 커지는 중.<br><br>
+ <b>쓰는 법 (사건 후):</b> 어느 칸의 계기가 발동했는지가 원인 감별의 1차 단서입니다(E칸 smh_gap 큰 음수 = 반도체발). 확정 태깅은 세션에서 리서치로.<br><br>
+ <b>1개월 판정:</b> 검증된 자산(VER #001)이 적용되는 사건만 판정을 내고, 적용 밖이면 "판정 불가"를 그대로 표시합니다. 판정이 없다는 사실도 정보입니다 — 침묵을 낙관으로 읽지 마십시오.
+ </div>
+</details></div>
 
 <script>
-const N=(v,d=2)=> (v===null||v===undefined||v==='')?null:Number(v).toFixed(d);
-const S=v=> v===null?'—':v;
-
-function tag(cls,txt){return `<span class="tag ${cls}">${txt}</span>`}
-function row(name,desc,val,t){
- return `<div class="row"><div class="rl"><div class="rname">${name}</div><div class="rdesc">${desc}</div></div>
- <div class="rv"><div class="rnum">${val}</div>${t||''}</div></div>`;
-}
-
+const S=v=> (v===null||v===undefined||v==='')?'—':(typeof v==='number'?Number(v).toLocaleString(undefined,{maximumFractionDigits:2}):v);
 fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
- const a=s.alarms;
- document.getElementById('sub').textContent =
-   `기준일 ${s.date} · 자동 갱신 ${s.updated_utc.slice(0,10)} ${s.updated_utc.slice(11,16)} UTC`;
+ document.getElementById('sub').textContent=`기준일 ${s.date} · 자동 갱신 ${s.updated_utc.slice(0,10)} ${s.updated_utc.slice(11,16)} UTC`;
 
- // --- 한 줄 판정
- let vcls='up', vtxt='평시 — 할 일 없음', vsub='사건 없음. 경보 전부 침묵.';
- if(a.vix_1y_pctile!==null && a.vix_1y_pctile>=90){
-   vcls='warn'; vtxt='상대 공포 국면'; vsub='VIX 1년 백분위 '+a.vix_1y_pctile+' — 사건 발생률 72~100% 구간 (#083)';}
- if(a.vix28_regime){vcls='warn'; vtxt='고변동 국면 (VIX≥28)'; vsub='하락 사건 시 1개월 반등 84~94%. 단 국면 첫날은 68% (#070)';}
- if(a.vix35_confirm){vcls='down'; vtxt='확진 — VIX≥35'; vsub='10거래일 내 ±2% 사건 사실상 확정 (11/11, #072)';}
- if(s.event){vcls='down'; vtxt='⚠ 사건 발생'; vsub='세션을 열어 루프 A 태깅 필요 — 브리핑 카드 생성됨';}
- document.getElementById('verdict').innerHTML =
-   `<div class="vbig ${vcls}">${vtxt}</div><div class="vsub">${vsub}</div>`;
+ let vcls='up',vtxt='평시',vsub='사건 없음. 아래 칸별 계기로 긴장 축적 여부만 훑으면 됩니다.';
+ const warnCnt=Object.values(s.panels).flatMap(p=>p.g).filter(g=>g.state==='warn'||g.state==='hot').length;
+ if(warnCnt>=3){vcls='warn';vtxt=`평시 — 경계 계기 ${warnCnt}개`;vsub='복수 칸에 긴장 축적 중. 어느 칸인지 아래에서 확인.';}
+ if(s.vix>=28){vcls='warn';vtxt='고변동 국면 (VIX≥28)';vsub='하락 사건 시 1개월 반등 84~94% 회랑 (#001)';}
+ if(s.vix>=35){vcls='down';vtxt='확진 — VIX≥35';vsub='10거래일 내 ±2% 사건 사실상 확정 (#072)';}
+ if(s.event){vcls='down';vtxt='⚠ 사건 발생';vsub='아래 1개월 판정과 칸별 발동 계기를 확인. 태깅은 세션에서.';}
+ document.getElementById('verdict').innerHTML=`<div class="vbig ${vcls}">${vtxt}</div><div class="vsub">${vsub}</div>`;
 
- // --- 시세
- const up=s.ret1_pct>=0, sign=v=> (v>0?'+':'')+N(v);
- document.getElementById('priceCard').innerHTML =
-  `<div style="display:flex;justify-content:space-between;align-items:flex-end">
-    <div><div class="price">${Number(s.ndx).toLocaleString()}</div>
-     <div class="dim" style="font-size:.78em">나스닥100 종가</div></div>
-    <div style="text-align:right">
-     <div class="chg ${up?'up':'down'}">${sign(s.ret1_pct)}%</div>
-     <div class="dim" style="font-size:.8em">3일 누적 ${sign(s.cum3_pct)}%</div>
-     <div class="dim" style="font-size:.8em">VIX ${S(N(s.vix))}</div></div>
-   </div>
-   <div class="note" style="margin-top:10px">사건 문턱까지 —
-     일간 <b>${(2-Math.abs(s.ret1_pct)).toFixed(2)}%p</b> · 3일 <b>${(5-Math.abs(s.cum3_pct)).toFixed(2)}%p</b> 남음</div>`;
+ const up=s.ret1_pct>=0, sg=v=>(v>0?'+':'')+Number(v).toFixed(2);
+ document.getElementById('priceCard').innerHTML=
+  `<div class="prow"><div><div class="price">${Number(s.ndx).toLocaleString()}</div>
+   <div class="dim" style="font-size:.76em">나스닥100 종가</div></div>
+   <div style="text-align:right">
+   <div class="${up?'up':'down'}" style="font-size:1.1em;font-weight:600">${sg(s.ret1_pct)}%</div>
+   <div class="dim" style="font-size:.8em">3일 ${sg(s.cum3_pct)}% · VIX ${S(s.vix)}</div>
+   <div class="dim" style="font-size:.78em">사건까지 일간 ${(2-Math.abs(s.ret1_pct)).toFixed(2)}%p · 3일 ${(5-Math.abs(s.cum3_pct)).toFixed(2)}%p</div></div></div>`;
 
- // --- 경보 (발동 우선 정렬)
- const AL=[
-  ['VIX ≥ 35 확진', '발동하면 10일 내 사건 확정 — 침묵은 무주장', a.vix35_confirm, S(N(s.vix))],
-  ['VIX ≥ 28 국면', '하락 사건의 1개월 반등 게이지 (VER 등급)', a.vix28_regime, S(N(s.vix))],
-  ['VIX 1년 백분위 ≥ 90', '상대 공포 국면 — 절대값이 낮아도 발동 가능', a.vix_1y_pctile>=90, S(a.vix_1y_pctile)],
-  ['모멘텀 판정식', '상승 사건의 원인 분류용 (예측 금지)', a.rule_momentum, a.rule_momentum?'성립':'불성립'],
-  ['S1 스퀴즈 판정식', '상승 사건의 원인 분류용 (예측 금지)', a.rule_s1_squeeze, a.rule_s1_squeeze?'성립':'불성립'],
- ];
- AL.sort((x,y)=> (y[2]?1:0)-(x[2]?1:0));
- document.getElementById('alarms').innerHTML = AL.map(([n,d,on,v])=>
-   row(n,d,`<span class="${on?'down':'dim'}">${v}</span>`, on?tag('t-hot','발동'):tag('t-off','침묵'))).join('');
- document.getElementById('fns').innerHTML = Object.values(s.footnotes).map(x=>'· '+x).join('<br>');
+ const m=s.monthly, mc={BOUNCE:'up',NO_CALL:'warn',NO_ASSET:'warn',NONE:'dim'}[m.stance]||'dim';
+ document.getElementById('monthly').innerHTML=
+  `<h2>1개월 판정</h2><div class="${mc}" style="font-weight:700;font-size:1.05em">${m.label}</div>
+   <div class="note" style="margin-top:3px">${m.why}</div>`;
 
- // --- 계기판
- const g=[];
- const sg=a.smh_gap;
- g.push(row('반도체 괴리 (smh_gap)','SMH − NDX 당일 수익률 차. 사건 원인 감별 최강 지표(#085)',
-   S(N(sg)), sg===null?tag('t-off','결측'):(sg<=-2?tag('t-hot','반도체발 하락'):(sg>=2?tag('t-warn','반도체 주도'):tag('t-ok','중립')))));
- g.push(row('메가캡 공매도 상대 (SVR)','20일 창 백분위. ≤20 저공매도 / ≥80 스퀴즈 압력 (#049)',
-   S(a.svr_rel), a.svr_rel===null?tag('t-off','결측'):(a.svr_rel<=20?tag('t-warn','저공매도'):(a.svr_rel>=80?tag('t-warn','숏 과밀'):tag('t-ok','중립')))));
- g.push(row('개별주 풋/콜 (P/C)','≤0.55 과열 낙관 / ≥1.0 공포 (#066)',
-   S(N(a.equity_pc)), a.equity_pc===null?tag('t-off','결측'):(a.equity_pc<=0.55?tag('t-warn','과열 낙관'):(a.equity_pc>=1?tag('t-warn','공포'):tag('t-ok','중립')))));
- g.push(row('선물 순숏 백분위 (NSP)','52주 창. ≥80 과밀 — 단 딜러 순숏 국면에선 신뢰 저하(#082)',
-   S(a.nsp), a.nsp===null?tag('t-off','결측'):(a.dealer_net<0?tag('t-off','휴면 — 딜러 순숏'):(a.nsp>=80?tag('t-hot','순숏 과밀'):tag('t-ok','중립')))));
- g.push(row('딜러 순포지션','양수 복귀가 NSP 부활 조건 — 씨앗은행 감시 대상(#082)',
-   a.dealer_net===null?'—':Number(a.dealer_net).toLocaleString(),
-   a.dealer_net===null?tag('t-off','결측'):(a.dealer_net<0?tag('t-warn','순숏 — 구조 반전 지속'):tag('t-ok','순롱 복귀'))));
- g.push(row('VIX 상대급변 백분위','당일 VIX 변화율의 역사적 순위 — 사건 강도계 (#083 A2)',
-   S(a.vix_rel_jump_pctile), a.vix_rel_jump_pctile===null?tag('t-off','결측'):(a.vix_rel_jump_pctile>=95?tag('t-hot','급변'):tag('t-ok','평온'))));
- document.getElementById('gauges').innerHTML = g.join('');
+ const order=['REGIME','A','B','C','D','E','F','G'];
+ document.getElementById('panels').innerHTML=order.map(k=>{
+  const p=s.panels[k]; if(!p)return '';
+  const anyHot=p.g.some(g=>g.state==='hot'), anyWarn=p.g.some(g=>g.state==='warn');
+  return `<div class="card" ${anyHot?'style="border-color:#f85149"':anyWarn?'style="border-color:#d2992288"':''}>
+   <h2>${p.title}${anyHot?' <span class="tag t-hot">발동</span>':''}</h2>
+   <div class="grammar">${p.grammar}</div>
+   ${p.g.map(g=>`<div class="grow"><div style="flex:1"><div class="gname">${g.name}</div>
+     <div class="gread">${g.read}</div></div>
+     <div class="gval">${S(g.val)}<span class="dot d-${g.state}"></span></div></div>`).join('')}
+  </div>`;
+ }).join('');
 }).catch(e=>document.getElementById('err').textContent='status.json 로드 실패: '+e);
 
-// --- 이력 (BOM·헤더 처리 수정)
 fetch('data/daily_scorecard.csv?t='+Date.now()).then(r=>r.text()).then(t=>{
  const lines=t.replace(/^﻿/,'').trim().split(/\r?\n/);
  const h=lines[0].split(',').map(x=>x.trim());
  const data=lines.slice(1).map(l=>Object.fromEntries(h.map((k,i)=>[k,(l.split(',')[i]||'').trim()])));
- const last=data.slice(-12).reverse();
- document.getElementById('hist').innerHTML =
-  '<tr><th>날짜</th><th>일간</th><th>3일</th><th>VIX</th><th>smh_gap</th><th>사건</th></tr>'
-  + last.map(o=>{
-     const r=Number(o.ret1);
-     return `<tr><td>${o.date.slice(5)}</td><td class="${r>=0?'up':'down'}">${r>0?'+':''}${o.ret1}%</td>`
-      +`<td class="dim">${o.cum3}%</td><td class="dim">${o.vix||'—'}</td><td class="dim">${o.smh_gap||'—'}</td>`
-      +`<td>${o.event==='1'?'<span class="tag t-hot">사건</span>':''}</td></tr>`;
-   }).join('');
+ document.getElementById('hist').innerHTML=
+  '<tr><th>날짜</th><th>일간</th><th>3일</th><th>VIX</th><th>smh_gap</th><th>2Y당일</th><th>사건</th></tr>'
+  +data.slice(-12).reverse().map(o=>{
+    const r=Number(o.ret1);
+    return `<tr><td>${o.date.slice(5)}</td><td class="${r>=0?'up':'down'}">${r>0?'+':''}${o.ret1}%</td>`
+     +`<td class="dim">${o.cum3}%</td><td class="dim">${o.vix||'—'}</td><td class="dim">${o.smh_gap||'—'}</td>`
+     +`<td class="dim">${o.y2_chg1||'—'}</td><td>${o.event==='1'?'<span class="tag t-hot">사건</span>':''}</td></tr>`;
+  }).join('');
 }).catch(()=>{});
 </script>
 </body>
