@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NDX Watch</title>
+<style>
+ body{font-family:'Segoe UI',sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:16px;max-width:760px;margin:auto}
+ h1{font-size:1.3em;color:#e6edf3}
+ .card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px;margin:10px 0}
+ .big{font-size:2em;font-weight:700}
+ .up{color:#3fb950}.down{color:#f85149}.warn{color:#d29922}
+ .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.8em;margin:2px;border:1px solid #30363d}
+ .on{background:#f8514922;border-color:#f85149;color:#f85149}
+ .off{color:#484f58}
+ table{width:100%;border-collapse:collapse;font-size:.85em}
+ td,th{padding:4px 6px;border-bottom:1px solid #21262d;text-align:right}
+ td:first-child,th:first-child{text-align:left}
+ .fn{font-size:.75em;color:#8b949e;margin-top:6px;line-height:1.5}
+ #err{color:#f85149}
+</style>
+</head>
+<body>
+<h1>NDX Watch <span id="upd" style="font-size:.55em;color:#8b949e"></span></h1>
+<div id="err"></div>
+
+<div class="card">
+ <div id="price" class="big">—</div>
+ <div id="evt"></div>
+</div>
+
+<div class="card">
+ <b>경보·국면</b><br>
+ <div id="alarms"></div>
+ <div class="fn" id="fns"></div>
+</div>
+
+<div class="card">
+ <b>계기판 (element)</b>
+ <table id="gauges"></table>
+</div>
+
+<div class="card">
+ <b>최근 채점</b>
+ <table id="hist"></table>
+ <div class="fn">사건 = 일간 ±2% 또는 3일 누적 ±5%. 침묵도 채점 대상(특이도).</div>
+</div>
+
+<script>
+const F = (v,d=2)=> v==null?'—':Number(v).toFixed(d);
+fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
+ document.getElementById('upd').textContent = s.date+' (갱신 '+s.updated_utc.slice(0,16)+'Z)';
+ const up = s.ret1_pct>=0;
+ document.getElementById('price').innerHTML =
+  `${F(s.ndx)} <span class="${up?'up':'down'}">${s.ret1_pct>0?'+':''}${F(s.ret1_pct)}%</span>`
+  +` <span style="font-size:.5em;color:#8b949e">3일 ${s.cum3_pct>0?'+':''}${F(s.cum3_pct)}%</span>`;
+ if(s.event) document.getElementById('evt').innerHTML = '<span class="badge on">사건 성립 — 브리핑 카드 생성됨</span>';
+
+ const a=s.alarms, B=(name,onCond,label)=>`<span class="badge ${onCond?'on':'off'}">${label||name}</span>`;
+ document.getElementById('alarms').innerHTML =
+  B('vix28', a.vix28_regime, `VIX≥28 국면 (VIX ${F(s.vix,2)})`)
+  +B('vix35', a.vix35_confirm, 'VIX≥35 확진')
+  +B('vix1y', a.vix_1y_pctile>=90, `VIX 1년백분위 ${a.vix_1y_pctile??'—'}`)
+  +B('mom', a.rule_momentum, '모멘텀식(사후분류)')
+  +B('s1', a.rule_s1_squeeze, 'S1 스퀴즈(사후분류)');
+
+ document.getElementById('gauges').innerHTML =
+  '<tr><th>계기</th><th>값</th><th>독법</th></tr>'
+  +`<tr><td>smh_gap</td><td>${F(a.smh_gap)}</td><td>동시판독 — 큰 음수=반도체발 (#085)</td></tr>`
+  +`<tr><td>SVR 20일 상대</td><td>${a.svr_rel??'—'}</td><td>≤20 저공매도 / ≥80 스퀴즈 압력 (#049)</td></tr>`
+  +`<tr><td>Equity P/C</td><td>${F(a.equity_pc)}</td><td>≤0.55 과열 낙관 (#066)</td></tr>`
+  +`<tr><td>NSP 52주 백분위</td><td>${a.nsp??'—'}</td><td>≥80 순숏 과밀 — 딜러 순롱 복귀 전 휴면 (#082)</td></tr>`
+  +`<tr><td>딜러 순포지션</td><td>${a.dealer_net??'—'}</td><td>양수 복귀 = NSP 부활 조건 (#082)</td></tr>`
+  +`<tr><td>VIX 상대급변 백분위</td><td>${a.vix_rel_jump_pctile??'—'}</td><td>사건일 강도 계기 (#083 A2)</td></tr>`;
+
+ document.getElementById('fns').innerHTML = Object.values(s.footnotes).map(x=>'· '+x).join('<br>');
+}).catch(e=>document.getElementById('err').textContent='status.json 로드 실패: '+e);
+
+fetch('data/daily_scorecard.csv?t='+Date.now()).then(r=>r.text()).then(t=>{
+ const rows=t.trim().split('\n').map(l=>l.split(','));
+ const h=rows[0], last=rows.slice(-10).reverse();
+ document.getElementById('hist').innerHTML =
+  '<tr><th>날짜</th><th>ret1</th><th>3일</th><th>사건</th><th>VIX</th><th>smh_gap</th></tr>'
+  +last.map(r=>{
+    const o=Object.fromEntries(h.map((k,i)=>[k,r[i]]));
+    const cls=o.ret1>=0?'up':'down';
+    return `<tr><td>${o.date}</td><td class="${cls}">${o.ret1}%</td><td>${o.cum3}%</td>`
+      +`<td>${o.event==='1'?'⚠':''}</td><td>${o.vix}</td><td>${o.smh_gap||'—'}</td></tr>`;
+  }).join('');
+}).catch(()=>{});
+</script>
+</body>
+</html>
