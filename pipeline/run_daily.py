@@ -298,6 +298,36 @@ dxc1 = pchg_of(ys['dxy'], sorted(ys['dxy'])[-1]) if ys.get('dxy') else None
 wtc1 = pchg_of(ys['wti'], sorted(ys['wti'])[-1]) if ys.get('wti') else None
 drawdown = dd60(today)
 
+# L2′ 탐사 게이지: MOVE × 커브(10Y−3M) 결합 백분위 (2020~ 전 역사 순위 곱, in-sample 탐사 등급)
+mc_pct = None
+try:
+    mf = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/move_full.csv')}
+    y3 = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/y3m.csv')}
+    y10f = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/y10_full.csv')}
+    def _asof(s, d0, back=10):
+        y_, m_, dd_ = map(int, d0.split('-')); t_ = date(y_, m_, dd_)
+        for b in range(back):
+            k = (t_ - timedelta(days=b)).isoformat()
+            if k in s: return s[k]
+        return None
+    hist = []
+    for d0 in sorted(k for k in y10f if k >= '2020-01-01'):
+        a = _asof(mf, d0); c1, c2 = y10f.get(d0), _asof(y3, d0)
+        if a is not None and c1 is not None and c2 is not None:
+            hist.append((d0, a, c1 - c2))
+    if len(hist) > 300:
+        mvv = [x[1] for x in hist]; cvv = [x[2] for x in hist]
+        rm = sorted(mvv); rc = sorted(cvv)
+        import bisect
+        pr_m = [bisect.bisect_right(rm, v) / len(rm) for v in mvv]
+        pr_c = [bisect.bisect_right(rc, v) / len(rc) for v in cvv]
+        prod = [(pm - 0.5) * (pc - 0.5) for pm, pc in zip(pr_m, pr_c)]
+        sp = sorted(prod)
+        mc_pct = round(100 * bisect.bisect_right(sp, prod[-1]) / len(sp))
+        note(f"MOVE×커브 게이지 ok ~{hist[-1][0]} 백분위 {mc_pct}")
+except Exception as e:
+    note(f"MOVE×커브 게이지 실패: {e}")
+
 panels = {
  'A': {'title': 'A 통화정책 (86건)', 'grammar': '서프라이즈 용량 반응 — 2Y 당일 변화가 출력과 단조(#019). 큰 |2Y당일|이 곧 사건 용량.',
    'g': [gauge('2Y 당일 변화(pp)', y2c1, '±0.10 이상이면 서프라이즈 급', st(y2c1 is not None and abs(y2c1) >= 0.10, missing=y2c1 is None)),
@@ -323,11 +353,14 @@ panels = {
          gauge('NSP 52주 백분위', np_, '≥80 과밀 — 딜러 순숏 국면에선 휴면(#082)', 'na' if np_ is None else ('warn' if (np_ >= 80 and dn is not None and dn > 0) else 'ok')),
          gauge('딜러 순포지션', dn, '양수 복귀=NSP 부활 조건(#082)', st(dn is not None and dn < 0, missing=dn is None)),
          gauge('DIX', dix_last and dix_last[1], '높을수록 다크풀 매집', 'na' if dix_last is None else 'ok')]},
- 'REGIME': {'title': '공통 국면', 'grammar': 'VER #001: VIX≥28 하락 사건 → 1개월 반등 84~94%(국면 첫날 68%). 저VIX 캄 크래시는 전 게이지 사각(#084).',
+ 'REGIME': {'title': '공통 국면', 'grammar': 'VER #001: VIX≥28 하락 사건 → 1개월 반등 84~94%(국면 첫날 68%). 저VIX 캄 크래시 사각(#084)은 아래 탐사 게이지가 감시.',
    'g': [gauge('VIX', v, '≥28 국면 / ≥35 확진(#072)', st(v is not None and v >= 28, cond_hot=v is not None and v >= 35, missing=v is None)),
          gauge('VIX 1년 백분위', v1y, '≥90 상대 공포 국면(#083)', st(v1y is not None and v1y >= 90, missing=v1y is None)),
          gauge('VIX 상대급변 백분위', vj, '≥95 급변(#083 A2)', st(vj is not None and vj >= 95, missing=vj is None)),
-         gauge('60일 고점 대비(%)', drawdown, '깊을수록 항복 국면(#033)', st(drawdown is not None and drawdown <= -10, missing=drawdown is None))]},
+         gauge('60일 고점 대비(%)', drawdown, '깊을수록 항복 국면(#033)', st(drawdown is not None and drawdown <= -10, missing=drawdown is None)),
+         gauge('MOVE×커브 결합백분위 [탐사]', mc_pct,
+               '저VIX 체제 전용 하방 게이지(L2′, in-sample) — ≥90이면 향후 1개월 경계. VIX≥28 국면에선 무효',
+               'na' if mc_pct is None else ('warn' if (mc_pct >= 90 and (v is None or v < 28)) else 'ok'))]},
 }
 
 # ============ 4. 1개월 판정 (보유 자산만으로 — 없으면 없다고 명시) ============
@@ -362,7 +395,8 @@ if not any(r['date'] == today for r in sc):
                'vix': v, 'vix_1y_pct': v1y, 'smh_gap': sg, 'nsp': np_, 'svr_rel': sr,
                'pc': pc.get(pc_last), 'dealer_net': dn, 'y2_chg1': y2c1, 'dxy_chg1': dxc1,
                'move': move_d and ys['move'][move_d], 'epu_pct': epu_pct,
-               'gex_b': dix_last and round(dix_last[2] / 1e9, 1), 'drawdown60': drawdown})
+               'gex_b': dix_last and round(dix_last[2] / 1e9, 1), 'drawdown60': drawdown,
+               'move_curve_pct': mc_pct})
     save_csv(sc_path, sc, list(sc[-1].keys()))
 
 msg = None

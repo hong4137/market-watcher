@@ -20,7 +20,7 @@ def save(name, rows, cols):
 
 # FRED 계열 (2019-06부터 — chg 계산 여유)
 for sid, name in [('BAMLH0A0HYM2', 'hy_oas'), ('BAMLC0A0CM', 'ig_oas'),
-                  ('DFII10', 'real10y'), ('DGS3MO', 'y3m')]:
+                  ('DFII10', 'real10y'), ('DGS3MO', 'y3m'), ('DGS10', 'y10_full')]:
     try:
         j = json.loads(get(f'https://api.stlouisfed.org/fred/series/observations?series_id={sid}&api_key={FRED}&file_type=json&observation_start=2019-06-01'))
         rows = [[o['date'], float(o['value'])] for o in j['observations'] if o['value'] != '.']
@@ -46,7 +46,7 @@ for sym, name in [('VXN', 'vxn'), ('VVIX', 'vvix'), ('SKEW', 'skew'),
         print(f'{name} 실패: {e}')
 
 # 야후 계열 (10년)
-for sym, name in [('GC=F', 'gold'), ('BTC-USD', 'btc'), ('QQQE', 'qqqe'), ('QQQ', 'qqq')]:
+for sym, name in [('GC=F', 'gold'), ('BTC-USD', 'btc'), ('QQQE', 'qqqe'), ('QQQ', 'qqq'), ('^MOVE', 'move_full')]:
     try:
         j = json.loads(get(f'https://query1.finance.yahoo.com/v8/finance/chart/{urllib.request.quote(sym)}?range=10y&interval=1d'))
         res = j['chart']['result'][0]
