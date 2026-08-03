@@ -98,6 +98,29 @@ fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
   `<h2>1개월 판정</h2><div class="${mc}" style="font-weight:700;font-size:1.05em">${m.label}</div>
    <div class="note" style="margin-top:3px">${m.why}</div>`;
 
+ const COMP={
+  A:`<b>구성 2코드</b>: HAWK_SHOCK 매파 서프라이즈 63건(하락 위주 48/63) · DOVE_SHOCK 비둘기 서프라이즈 23건(상승 위주 21/23).<br>
+     <b>한 묶음인 이유</b>: 방향만 반대일 뿐 발생 기전이 동일 — 연준이 시장 기대와 다른 말을 한 날. 그래서 놀람의 크기가 하나의 계기(2Y 당일 변화)로 양쪽 다 계측됩니다(#019).<br>
+     <b>상태</b>: 균질성 1차 점검 완료. 2022년 집중(약 절반)이라 시대 편중 유의.`,
+  B:`<b>구성 6코드</b>: RECESSION_FEAR 침체공포 23건 · COOL_INFL 물가둔화 16건(상승 15/16) · HOT_INFL 물가쇼크 12건 · GROWTH_SURP 성장서프라이즈 10건 · SOFT_LABOR 고용둔화 6건 · HOT_LABOR 고용과열 1건.<br>
+     <b>한 묶음인 이유</b>: 전부 '경제지표 발표일의 서프라이즈'가 방아쇠 — CPI·고용·GDP 등 지표만 다를 뿐, 채권시장(2Y)을 거쳐 주가로 전달되는 경로가 같습니다(상관 0.41, #022).<br>
+     <b>상태</b>: <span class="warn">이질성 신호</span> — 채권 매개형과 주식 자체 동학형이 혼재. 분할 후보 대기.`,
+  C:`<b>구성 4코드</b>: PANDEMIC 보건 38건 · GEOPOL 지정학 긴장 16건 · WAR 전쟁 12건 · ELECTION 선거 12건.<br>
+     <b>한 묶음인 이유</b>: 전부 경제 바깥에서 온 외생 충격 — 지표·실적·연준과 무관하게 터집니다.<br>
+     <b>상태</b>: 내부 이분 확정(#067) — 같은 칸 안에서도 계측 경로가 둘로 갈립니다. 에너지·통화형(GEOPOL·WAR)=달러 용량계(0.69)+유가 보조 / 보건형(PANDEMIC)=채권·통화 무반응, VIX 경로만 / ELECTION=표본 소진, 관찰 상한.`,
+  D:`<b>구성 4코드</b>: BANK_FAIL 은행 파산 2건 · CREDIT_STRESS 신용경색 1건 · SOVEREIGN 국가신용 1건 · FX_SHOCK 통화위기 1건.<br>
+     <b>한 묶음인 이유</b>: 금융 시스템 내부의 전염(도미노) 경로라는 공통 기전.<br>
+     <b>상태</b>: <span class="warn">합계 5건 — 통계 성립 불가, 영구 공백 명시</span>. 2020~26년에 본격 신용위기가 없었기 때문. MOVE는 관찰 계기일 뿐 검증 자산 아님.`,
+  E:`<b>구성 2코드</b>: MAG7_EARN 빅테크 실적 49건(상승 27/하락 22) · SECTOR_BLOW 섹터 붕괴 2건(전부 하락, 2026-06 신설).<br>
+     <b>한 묶음인 이유</b>: 기업 자체 뉴스가 지수를 직접 견인하는 '직접형' — 채권 매개가 없다는 점이 A·B칸과 구분되는 핵심 특징입니다. 용량계=주도주 절대등락(#021).<br>
+     <b>상태</b>: 균질성 1차 점검 완료. SECTOR_BLOW는 표본 축적 중(smh_gap이 감별 계기).`,
+  F:`<b>구성 3코드</b>: TARIFF 관세 20건(상승10/하락10) · FISCAL 재정·부양 19건(상승 16/19) · REGULATION 규제 5건(전부 하락).<br>
+     <b>한 묶음인 이유</b>: 전부 정부의 정책 결정이 방아쇠 — 시장이 아니라 정치 일정을 따라 옵니다.<br>
+     <b>상태</b>: TARIFF는 균질성 깨짐 확정 → 계산형 하위분류로 재편(#040. EPU는 시대상수라 판별력 없음 — 판별은 GEX·성장·시스템 축, #013·#015). FISCAL은 점화 단조 확인(1.65→4.50%).`,
+  G:`<b>구성 4코드</b>: MOMENTUM 콜추격 모멘텀 8건(전부 상승) · GAMMA 감마 증폭 6건 · SQUEEZE 숏스퀴즈 6건 · NO_CATALYST 무촉매 1건.<br>
+     <b>한 묶음인 이유</b>: 외부 뉴스 없이 시장 내부의 수급·기계 구조(옵션 딜러, 공매도 포지션)가 스스로 원인이 된 날들.<br>
+     <b>상태</b>: 유일하게 판정식이 있는 칸(모멘텀=SVR≤20+P/C≤0.55 / S1=SVR≥80+NSP≥80) — 단 사후 분류 전용, 예측 금지(#070). 참고: H칸(위험선호)은 주원인 금지 규칙으로 0건 유지.`,
+ };
  const order=['REGIME','A','B','C','D','E','F','G'];
  document.getElementById('panels').innerHTML=order.map(k=>{
   const p=s.panels[k]; if(!p)return '';
@@ -105,6 +128,7 @@ fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
   return `<div class="card" ${anyHot?'style="border-color:#f85149"':anyWarn?'style="border-color:#d2992288"':''}>
    <h2>${p.title}${anyHot?' <span class="tag t-hot">발동</span>':''}</h2>
    <div class="grammar">${p.grammar}</div>
+   ${COMP[k]?`<details><summary>구성 코드와 묶음 이유 (353건 기준)</summary><div class="note">${COMP[k]}</div></details>`:''}
    ${p.g.map(g=>`<div class="grow"><div style="flex:1"><div class="gname">${g.name}</div>
      <div class="gread">${g.read}</div></div>
      <div class="gval">${S(g.val)}<span class="dot d-${g.state}"></span></div></div>`).join('')}

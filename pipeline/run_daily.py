@@ -299,20 +299,20 @@ wtc1 = pchg_of(ys['wti'], sorted(ys['wti'])[-1]) if ys.get('wti') else None
 drawdown = dd60(today)
 
 panels = {
- 'A': {'title': 'A 통화정책 (85건)', 'grammar': '서프라이즈 용량 반응 — 2Y 당일 변화가 출력과 단조(#019). 큰 |2Y당일|이 곧 사건 용량.',
+ 'A': {'title': 'A 통화정책 (86건)', 'grammar': '서프라이즈 용량 반응 — 2Y 당일 변화가 출력과 단조(#019). 큰 |2Y당일|이 곧 사건 용량.',
    'g': [gauge('2Y 당일 변화(pp)', y2c1, '±0.10 이상이면 서프라이즈 급', st(y2c1 is not None and abs(y2c1) >= 0.10, missing=y2c1 is None)),
          gauge('2Y 5일 변화(pp)', y2c5, '누적 재가격 방향', 'na' if y2c5 is None else 'ok')]},
  'B': {'title': 'B 거시지표 (68건)', 'grammar': '채권 매개형 — 2Y 당일 상관 0.41(#022). 단 주식 자체 동학형 혼재(이질성 미해결).',
    'g': [gauge('2Y 당일 변화(pp)', y2c1, 'A칸과 계기 공유', 'na' if y2c1 is None else 'ok'),
          gauge('10Y 당일 변화(pp)', y10c1, '장기 재가격', 'na' if y10c1 is None else 'ok')]},
- 'C': {'title': 'C 지정학·충격 (75건)', 'grammar': '에너지·통화형=달러 용량계(상관 0.69)·유가 보조. 보건형=VIX 경로만. 방향 비대칭: 고조 달러 0.57 / 완화 방출 0.33(#080).',
+ 'C': {'title': 'C 지정학·충격 (78건)', 'grammar': '에너지·통화형=달러 용량계(상관 0.69)·유가 보조. 보건형=VIX 경로만. 방향 비대칭: 고조 달러 0.57 / 완화 방출 0.33(#080).',
    'g': [gauge('달러 당일 %', dxc1, '급등=고조 용량', st(dxc1 is not None and abs(dxc1) >= 0.5, missing=dxc1 is None)),
          gauge('WTI 당일 %', wtc1, '보조 용량계', st(wtc1 is not None and abs(wtc1) >= 3, missing=wtc1 is None)),
          gauge('EPU 역사 백분위', epu_pct, '정책·확전 소음 수준', st(epu_pct is not None and epu_pct >= 90, missing=epu_pct is None))]},
  'D': {'title': 'D 신용·시스템 (5건)', 'grammar': '표본 5건 — 검증 영구 공백(이 기간에 신용위기 부재). MOVE는 관찰 계기일 뿐 판정 자산 없음.',
    'g': [gauge('MOVE', move_d and ys['move'][move_d], '채권 발작 온도계', st(move_d is not None and ys['move'][move_d] >= 120, missing=move_d is None)),
          gauge('MOVE 5일 변화', move_c5, '급등=시스템 경계', 'na' if move_c5 is None else 'ok')]},
- 'E': {'title': 'E 빅테크 실적·섹터 (49건)', 'grammar': '직접형 — 주도주 절대등락 단조(#021). E.SECTOR_BLOW: SMH가 출력의 ~2배(#085).',
+ 'E': {'title': 'E 빅테크 실적·섹터 (51건)', 'grammar': '직접형 — 주도주 절대등락 단조(#021). E.SECTOR_BLOW: SMH가 출력의 ~2배(#085).',
    'g': [gauge('smh_gap (SMH−NDX)', sg, '큰 음수=반도체발. 동시 판독 전용(전조 아님)', st(sg is not None and abs(sg) >= 2, cond_hot=sg is not None and sg <= -3, missing=sg is None))]},
  'F': {'title': 'F 무역·재정·정책 (44건)', 'grammar': '관세: EPU는 시대상수(#015) — 판별은 GEX·성장·시스템(#013). FISCAL: 점화 단조 1.65→4.50%.',
    'g': [gauge('EPU 역사 백분위', epu_pct, 'C칸과 공유 — 수준보다 급변에 주목', 'na' if epu_pct is None else 'ok'),
