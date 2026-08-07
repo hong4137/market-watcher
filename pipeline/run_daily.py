@@ -401,12 +401,62 @@ if not any(r['date'] == today for r in sc):
 
 msg = None
 if event:
+    # ==== 사전등록 카드 판독 (preregistration_20260808.md — 산식 동결) ====
+    cards = []
+    try:
+        def _pctile_of(series_dict, x, since='2015-01-01'):
+            vals = [v for k, v in series_dict.items() if k >= since]
+            return round(100 * sum(1 for v in vals if v <= x) / max(len(vals), 1)) if vals else None
+        exd = lambda nm: {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/{nm}.csv')}
+        mvf = exd('move_full'); y10h = exd('y10_hist'); y3h = exd('y3m_hist'); v9 = exd('vix9d')
+        cpf = exd('copper'); gdf = exd('gold')
+        def _asof(s, d0, back=12):
+            y_, m_, dd_ = map(int, d0.split('-')); t_ = date(y_, m_, dd_)
+            for b in range(back):
+                k = (t_ - timedelta(days=b)).isoformat()
+                if k in s: return s[k]
+            return None
+        M_ = _asof(mvf, today); C_ = (y10h.get(today) or _asof(y10h, today))
+        C3 = _asof(y3h, today); T9v = None
+        v9v = _asof(v9, today)
+        if v9v and v: T9v = v9v / v
+        curve_v = (C_ - C3) if (C_ is not None and C3 is not None) else None
+        mp = _pctile_of(mvf, M_) if M_ else None
+        cp2 = _pctile_of({k: y10h[k] - y3h[k] for k in y10h if k in y3h}, curve_v) if curve_v is not None else None
+        t9p = _pctile_of({k: v9[k] / vix[k] for k in v9 if k in vix and vix[k]}, T9v) if T9v else None
+        vp = _pctile_of(vix, v) if v else None
+        cg_ = {k: cpf[k] / gdf[k] for k in cpf if k in gdf}
+        a_ = _asof(cg_, today); yy_, mm_, dd2 = map(int, today.split('-'))
+        b_ = _asof(cg_, (date(yy_, mm_, dd2) - timedelta(days=30)).isoformat())
+        cu22 = round(100 * (a_ / b_ - 1), 2) if (a_ and b_) else None
+        cu22p = _pctile_of({k: 0 for k in []}, 0) if cu22 is None else None
+        L1v = min(vp, epu_pct) if (vp is not None and epu_pct is not None) else None
+        L1p_v = (L1v - min(mp, cp2)) if (L1v is not None and mp is not None and cp2 is not None) else None
+        L3v = (min(mp, cp2) - t9p) if (mp is not None and cp2 is not None and t9p is not None) else None
+        cards = [
+            f"P1_L2': 결합백분위 {mc_pct} → {'위험' if (mc_pct or 0) >= 80 else ('안전' if (mc_pct or 99) <= 20 else '중립')} (VIX<28 하락만 카운트)",
+            f"P2_L1: min(VIX백분위 {vp}, EPU백분위 {epu_pct}) = {L1v} → {'항복(카운트)' if (L1v or 0) >= 80 else '미달'}",
+            f"P3_L1': {L1p_v} (서열 적립)",
+            f"P4_L3(태깅 후): min(MOVE {mp}, 커브 {cp2}) − T9 {t9p} = {L3v}",
+            f"P6_L5(태깅 후): CU22 {cu22}%",
+        ]
+        led_p = f'{D}/forward_count_ledger.csv'
+        led = load_csv(led_p)
+        if not any(r.get('date') == today for r in led):
+            led.append({'date': today, 'event_ret': round(ret1, 2), 'domain': ('사각지대' if (v or 99) < 28 and ret1 < 0 else ('하락' if ret1 < 0 else '상승')),
+                        'card': 'AUTO', 'reading': ' | '.join(cards), 'verdict': '태깅·만기 대기',
+                        'fwd22_due': (date(yy_, mm_, dd2) + timedelta(days=32)).isoformat(), 'fwd22_actual': '', 'pass': ''})
+            save_csv(led_p, led, ['date', 'event_ret', 'domain', 'card', 'reading', 'verdict', 'fwd22_due', 'fwd22_actual', 'pass'])
+        note('사전등록 카드 판독·대장 기입 완료')
+    except Exception as e:
+        note(f'카드 판독 실패: {e}')
     hot = [f"{p['title']}: " + ', '.join(f"{g['name']}={g['val']}" for g in panels[k]['g'] if g['state'] in ('warn', 'hot'))
            for k, p in panels.items() if any(g['state'] in ('warn', 'hot') for g in p['g'])]
     msg = '\n'.join([f"[사건] {today} NDX {ret1:+.2f}% (3일 {cum3:+.2f}%)",
                      f"1개월 판정: {monthly['label']} — {monthly['why']}",
                      '경계 계기: ' + ('; '.join(hot) if hot else '전 계기 중립 (무전조형)'),
-                     '다음: 세션 열어 루프 A 태깅 (원인 확정은 리서치로)'])
+                     '── 사전등록 카드 판독 ──'] + cards +
+                    ['다음: 세션 열어 루프 A 태깅 (원인 확정은 리서치로)'])
     with open(f'{D}/briefing_{today}.md', 'w', encoding='utf-8') as f:
         f.write(msg)
 elif v is not None and v >= 35:
