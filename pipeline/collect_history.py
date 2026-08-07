@@ -19,6 +19,15 @@ def save(name, rows, cols):
     print(f'{name}: {len(rows)}행 {rows[0][0] if rows else "-"}~{rows[-1][0] if rows else "-"}')
 
 # FRED 계열 (2019-06부터 — chg 계산 여유)
+FULL = {'ndx_full': 'NASDAQ100', 'y10_hist': 'DGS10', 'y3m_hist': 'DGS3MO'}
+for name, sid in FULL.items():
+    try:
+        j = json.loads(get(f'https://api.stlouisfed.org/fred/series/observations?series_id={sid}&api_key={FRED}&file_type=json&observation_start=1985-01-01'))
+        rows = [[o['date'], float(o['value'])] for o in j['observations'] if o['value'] != '.']
+        save(name, rows, ['Date', 'Close'])
+    except Exception as e:
+        print(f'{name} 실패: {e}')
+
 for sid, name in [('BAMLH0A0HYM2', 'hy_oas'), ('BAMLC0A0CM', 'ig_oas'),
                   ('DFII10', 'real10y'), ('DGS3MO', 'y3m'), ('DGS10', 'y10_full'),
                   ('DGS30', 'y30'), ('DGS5', 'y5'), ('T5YIFR', 't5yifr'),
@@ -51,7 +60,7 @@ for sym, name in [('VXN', 'vxn'), ('VVIX', 'vvix'), ('SKEW', 'skew'),
 for sym, name in [('GC=F', 'gold'), ('BTC-USD', 'btc'), ('QQQE', 'qqqe'), ('QQQ', 'qqq'), ('^MOVE', 'move_full'),
                   ('HG=F', 'copper'), ('IWM', 'iwm'), ('IYT', 'iyt'), ('XLY', 'xly'), ('XLP', 'xlp'), ('XLF', 'xlf')]:
     try:
-        j = json.loads(get(f'https://query1.finance.yahoo.com/v8/finance/chart/{urllib.request.quote(sym)}?range=10y&interval=1d'))
+        j = json.loads(get(f'https://query1.finance.yahoo.com/v8/finance/chart/{urllib.request.quote(sym)}?range=max&interval=1d'))
         res = j['chart']['result'][0]
         rows = [[datetime.utcfromtimestamp(t).strftime('%Y-%m-%d'), round(c, 3)]
                 for t, c in zip(res['timestamp'], res['indicators']['quote'][0]['close']) if c]
