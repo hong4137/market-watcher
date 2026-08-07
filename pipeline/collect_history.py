@@ -20,7 +20,8 @@ def save(name, rows, cols):
 
 # FRED 계열 (2019-06부터 — chg 계산 여유)
 for sid, name in [('BAMLH0A0HYM2', 'hy_oas'), ('BAMLC0A0CM', 'ig_oas'),
-                  ('DFII10', 'real10y'), ('DGS3MO', 'y3m'), ('DGS10', 'y10_full')]:
+                  ('DFII10', 'real10y'), ('DGS3MO', 'y3m'), ('DGS10', 'y10_full'),
+                  ('DGS30', 'y30'), ('DGS5', 'y5'), ('T5YIFR', 't5yifr')]:
     try:
         j = json.loads(get(f'https://api.stlouisfed.org/fred/series/observations?series_id={sid}&api_key={FRED}&file_type=json&observation_start=2019-06-01'))
         rows = [[o['date'], float(o['value'])] for o in j['observations'] if o['value'] != '.']
