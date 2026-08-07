@@ -60,7 +60,7 @@ for sym, name in [('VXN', 'vxn'), ('VVIX', 'vvix'), ('SKEW', 'skew'),
 for sym, name in [('GC=F', 'gold'), ('BTC-USD', 'btc'), ('QQQE', 'qqqe'), ('QQQ', 'qqq'), ('^MOVE', 'move_full'),
                   ('HG=F', 'copper'), ('IWM', 'iwm'), ('IYT', 'iyt'), ('XLY', 'xly'), ('XLP', 'xlp'), ('XLF', 'xlf')]:
     try:
-        j = json.loads(get(f'https://query1.finance.yahoo.com/v8/finance/chart/{urllib.request.quote(sym)}?range=max&interval=1d'))
+        j = json.loads(get(f'https://query1.finance.yahoo.com/v8/finance/chart/{urllib.request.quote(sym)}?period1=915148800&period2=9999999999&interval=1d'))
         res = j['chart']['result'][0]
         rows = [[datetime.utcfromtimestamp(t).strftime('%Y-%m-%d'), round(c, 3)]
                 for t, c in zip(res['timestamp'], res['indicators']['quote'][0]['close']) if c]
