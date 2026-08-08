@@ -9,22 +9,21 @@
        --up:#3fb950;--down:#f85149;--warn:#d29922}
  *{box-sizing:border-box}
  body{font-family:-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);
-      margin:0;padding:14px;max-width:680px;margin:auto;line-height:1.5}
+      margin:0;padding:14px;max-width:680px;margin:auto;line-height:1.55}
  h1{font-size:1.1em;margin:0 0 2px;letter-spacing:.5px}
  .sub{font-size:.75em;color:var(--dim);margin-bottom:12px}
  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:10px 0}
  .verdict{text-align:center;padding:18px 16px}
- .vbig{font-size:1.35em;font-weight:700;margin-bottom:4px}
- .vsub{font-size:.82em;color:var(--dim);max-width:520px;margin:auto}
+ .vbig{font-size:1.35em;font-weight:700;margin-bottom:6px}
+ .vsub{font-size:.85em;color:var(--dim);max-width:540px;margin:auto;line-height:1.7}
  .price{font-size:2em;font-weight:700;letter-spacing:-1px}
  .up{color:var(--up)}.down{color:var(--down)}.warn{color:var(--warn)}.dim{color:var(--dim)}
  .prow{display:flex;justify-content:space-between;align-items:flex-end}
  h2{font-size:.8em;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin:0 0 6px;font-weight:600}
- .grammar{font-size:.76em;color:var(--dim);line-height:1.55;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #21262d}
- .grow{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #21262d;gap:10px}
+ .grow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #21262d;gap:10px}
  .grow:last-child{border-bottom:0}
- .gname{font-size:.88em;font-weight:600}
- .gread{font-size:.73em;color:var(--dim);margin-top:1px}
+ .gname{font-size:.92em;font-weight:600}
+ .gread{font-size:.75em;color:var(--dim);margin-top:2px}
  .gval{font-size:1.05em;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:7px;vertical-align:1px}
  .d-ok{background:#2ea043}.d-warn{background:#d29922}.d-hot{background:#f85149}.d-na{background:#484f58}
@@ -33,7 +32,7 @@
  td,th{padding:6px 4px;border-bottom:1px solid #21262d;text-align:right}
  td:first-child,th:first-child{text-align:left}
  details summary{cursor:pointer;font-size:.8em;color:#58a6ff;padding:5px 0}
- .note{font-size:.76em;color:var(--dim);line-height:1.7;margin-top:6px}
+ .note{font-size:.78em;color:var(--dim);line-height:1.75;margin-top:6px}
  .note b{color:#c9d1d9}
  .tag{display:inline-block;font-size:.68em;padding:1px 8px;border-radius:9px}
  .t-hot{background:#f8514922;color:#f85149}
@@ -43,7 +42,7 @@
 </head>
 <body>
 
-<h1>NDX WATCH</h1>
+<h1>NDX WATCH — 나스닥100 관측소</h1>
 <div class="sub" id="sub">불러오는 중…</div>
 <div id="err"></div>
 
@@ -51,46 +50,105 @@
 <div class="card" id="priceCard"></div>
 <div class="card" id="monthly"></div>
 <div class="card" id="cardsPanel" style="display:none;border-color:#d29922">
- <h2>사건일 카드 판독 (사전등록 v1.8 — 칸 확정 전 조건부 병렬)</h2>
+ <h2>큰 변동 발생 — 상황별 판독</h2>
+ <div class="note" style="margin-bottom:8px">아래는 "이 급변의 원인이 무엇이냐"에 따라 갈리는 판독입니다.
+ 뉴스에서 원인을 확인한 뒤 해당 줄만 읽으면 됩니다.</div>
  <div id="cardsList" class="note" style="line-height:1.9"></div>
 </div>
 <div class="card" id="ledgerPanel" style="display:none">
- <h2>전방 카운트 대장 (자동 채점)</h2>
+ <h2>최근 큰 변동의 한 달 성적표 (자동 채점)</h2>
  <table id="ledgerT"></table>
- <div class="note">만기(22거래일) 도래 시 fwd22 자동 기입. 트리거 도달 시 승격 상정.</div>
+ <div class="note">급등·급락이 있던 날로부터 한 달(22거래일) 뒤 실제로 어떻게 됐는지 자동으로 채점합니다.</div>
 </div>
 
-<div class="legend">● 초록 중립 · ● 노랑 경계 · ● 빨강 발동 · ● 회색 결측/휴면</div>
+<div class="legend">● 초록 평온 · ● 노랑 긴장 · ● 빨강 위험 · ● 회색 데이터 없음/휴면</div>
 <div id="panels"></div>
 
 <div class="card">
- <h2>최근 채점</h2>
+ <h2>최근 2주 흐름</h2>
  <table id="hist"></table>
- <div class="note">사건 = 일간 ±2% 또는 3거래일 누적 ±5%. 침묵도 채점 대상.</div>
+ <div class="note">"큰 변동" = 하루 ±2% 또는 3거래일 누적 ±5% 움직인 날.</div>
 </div>
 
 <div class="card"><details>
- <summary>■ 이 화면 읽는 법</summary>
+ <summary>■ 이 화면을 처음 보는 분께 — 읽는 법</summary>
  <div class="note">
- <b>설계 철학:</b> 이 상황판은 예측 기계가 아닙니다. 각 칸(사건 원인 카테고리)마다 연구로 확정된 관련 계기를 펼쳐놓은 것이고, 최종 판단은 사람이 계기들을 종합해서 내립니다.<br><br>
- <b>칸이란:</b> 353건의 사건을 원인별로 분류한 8개 그룹입니다(A 통화정책 85건 · B 거시지표 68건 · C 지정학 75건 · E 실적 49건 · F 정책 44건 · G 수급 21건 등). 각 칸에는 그 칸 사건들이 공통으로 보이는 '용량계'(사건의 크기를 재는 수치)가 붙어 있습니다.<br><br>
- <b>쓰는 법 (평시):</b> 노랑·빨강 점이 몰리는 칸이 지금 긴장이 쌓이는 자리입니다. 예: C칸의 달러·유가가 동시에 노랑이면 지정학 쪽 용량이 커지는 중.<br><br>
- <b>쓰는 법 (사건 후):</b> 어느 칸의 계기가 발동했는지가 원인 감별의 1차 단서입니다(E칸 smh_gap 큰 음수 = 반도체발). 확정 태깅은 세션에서 리서치로.<br><br>
- <b>1개월 판정:</b> 검증된 자산(VER #001)이 적용되는 사건만 판정을 내고, 적용 밖이면 "판정 불가"를 그대로 표시합니다. 판정이 없다는 사실도 정보입니다 — 침묵을 낙관으로 읽지 마십시오.
+ <b>맨 위 한 줄이 결론입니다.</b> 초록이면 특별히 볼 것 없는 날, 노랑이면 어딘가 긴장이 쌓이는 중, 빨강이면 큰 변동이 발생해 판독이 필요한 날입니다.<br><br>
+ <b>이 화면은 예측기가 아닙니다.</b> 나스닥100이 크게 움직인 353번의 사례를 원인별로 분류해 연구한 결과를 계기판으로 만든 것입니다. 평소에는 "어느 쪽에 긴장이 쌓이나"를 보여주고, 큰 변동이 터지면 "과거 비슷한 사례에서 한 달 뒤 어떻게 됐나"를 참고 자료로 제시합니다.<br><br>
+ <b>계기판 칸들은 급변의 원인 종류입니다.</b> 연준의 말(통화정책), 경제 지표, 전쟁·지정학, 기업 실적, 정부 정책, 시장 내부 수급 — 각 칸에는 그 원인일 때 실제로 반응했던 수치들만 걸어뒀습니다.<br><br>
+ <b>참고 수준으로만.</b> 여기의 규칙들은 2015년 이후 데이터로 검증됐지만 표본이 작고, 시장 구조가 바뀌면 틀릴 수 있습니다. 투자 판단의 근거가 아니라 상황 파악 보조 도구입니다.
  </div>
 </details></div>
 
 <script>
 const S=v=> (v===null||v===undefined||v==='')?'—':(typeof v==='number'?Number(v).toLocaleString(undefined,{maximumFractionDigits:2}):v);
-fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
- document.getElementById('sub').textContent=`기준일 ${s.date} · 자동 갱신 ${s.updated_utc.slice(0,10)} ${s.updated_utc.slice(11,16)} UTC`;
 
- let vcls='up',vtxt='평시',vsub='사건 없음. 아래 칸별 계기로 긴장 축적 여부만 훑으면 됩니다.';
- const warnCnt=Object.values(s.panels).flatMap(p=>p.g).filter(g=>g.state==='warn'||g.state==='hot').length;
- if(warnCnt>=3){vcls='warn';vtxt=`평시 — 경계 계기 ${warnCnt}개`;vsub='복수 칸에 긴장 축적 중. 어느 칸인지 아래에서 확인.';}
- if(s.vix>=28){vcls='warn';vtxt='고변동 국면 (VIX≥28)';vsub='하락 사건 시 1개월 반등 84~94% 회랑 (#001)';}
- if(s.vix>=35){vcls='down';vtxt='확진 — VIX≥35';vsub='10거래일 내 ±2% 사건 사실상 확정 (#072)';}
- if(s.event){vcls='down';vtxt='⚠ 사건 발생';vsub='아래 1개월 판정과 칸별 발동 계기를 확인. 태깅은 세션에서.';}
+// ===== 일반인용 번역 사전 =====
+const GNAME={
+ 'VIX':['공포 지수 (VIX)','주식시장이 얼마나 불안한가. 28을 넘으면 공포 국면, 35를 넘으면 폭풍'],
+ 'VIX 1년 백분위':['공포 수준 — 지난 1년 대비','0=1년 중 가장 평온, 100=가장 불안. 90 이상이면 경계'],
+ 'VIX 상대급변 백분위':['오늘 공포가 얼마나 급하게 뛰었나','95 이상이면 역사적 급변 — 무언가 터졌다는 뜻'],
+ '60일 고점 대비(%)':['최근 고점에서 얼마나 내려왔나','-10% 이하면 본격 조정 국면'],
+ 'MOVE×커브 결합백분위 [탐사]':['채권시장 스트레스 게이지 (실험 중)','주식이 평온해도 채권시장이 불안하면 한 달 뒤가 나빴던 패턴. 90 이상이면 경계 — 단 검증 진행 중인 실험 지표'],
+ '2Y 당일 변화(pp)':['단기 금리가 오늘 얼마나 움직였나','연준 서프라이즈의 크기. ±0.10 이상이면 큰 충격'],
+ '2Y 5일 변화(pp)':['단기 금리 일주일 흐름','금리 기대가 어느 방향으로 재조정 중인가'],
+ '10Y 당일 변화(pp)':['장기 금리가 오늘 얼마나 움직였나','성장·인플레 전망의 재조정'],
+ '달러 당일 %':['달러 가치 변화','전쟁·위기 때 돈이 달러로 피신하면 급등'],
+ 'WTI 당일 %':['유가 변화','중동 등 지정학 긴장의 온도계'],
+ 'EPU 역사 백분위':['정책 불확실성 (뉴스 기반)','1985년 이래 상위 몇 %인가. 90 이상이면 정책 소음 극심'],
+ 'MOVE':['채권시장 공포 지수 (MOVE)','채권판 VIX. 120 이상이면 채권시장 발작'],
+ 'MOVE 5일 변화':['채권 공포의 일주일 변화','급등하면 시스템 경계'],
+ 'smh_gap (SMH−NDX)':['반도체가 시장보다 얼마나 약한가','큰 음수면 반도체발 하락 — 급변의 원인 감별용'],
+ 'SVR 20일 상대':['대형주 공매도 압력','20 이하면 공매도 적음, 80 이상이면 숏 과밀'],
+ 'Equity P/C':['개인 옵션 심리 (풋/콜)','0.55 이하면 과열 낙관, 1.0 이상이면 공포'],
+ 'NSP 52주 백분위':['선물 순매도 포지션','80 이상이면 하락 베팅 과밀 — 단 휴면 상태 표시 시 무시'],
+ '딜러 순포지션':['중개사(딜러) 포지션','음수 지속이면 시장 구조 불안정'],
+ 'DIX':['다크풀 매집 지표','높을수록 큰손이 조용히 사는 중'],
+ 'GEX($B)':['옵션 딜러 감마','음수면 변동을 증폭시키는 시장 구조'],
+};
+const PNAME={
+ 'REGIME':['지금 시장은 어떤 국면인가','급변이 없어도 매일 보는 기본 계기판'],
+ 'A':['연준·금리 (통화정책)','파월 발언, FOMC 등. 단기 금리가 놀라면 이 칸'],
+ 'B':['경제 지표 (물가·고용·성장)','CPI, 고용 지표 등 발표일의 서프라이즈'],
+ 'C':['전쟁·지정학·전염병','경제 밖에서 오는 충격. 달러와 유가가 온도계'],
+ 'D':['금융시스템 위기','은행 파산 등. 사례가 5건뿐이라 검증 불가 — 관찰만'],
+ 'E':['빅테크 실적·반도체','기업 실적이 지수를 직접 흔드는 경우'],
+ 'F':['정부 정책 (관세·재정)','관세 전쟁, 부양책 등 정치발 충격'],
+ 'G':['시장 내부 수급','뉴스 없이 옵션·공매도 구조가 만드는 급변'],
+};
+function tr(name){ return GNAME[name]||[name,null]; }
+
+function trCard(c){
+ // 카드 문안 일반어 치환
+ return c
+  .replace("[상시] L2' 결합백분위","[평상시 게이지] 채권 스트레스 백분위")
+  .replace('[전칸] L1 항복점수','[공통] 시장 항복 점수(공포+정책불안 동시 극단)')
+  .replace("[IF A칸·매파] L3","[원인이 '연준 매파 발언'이면] 채권 스트레스 판독")
+  .replace('[IF A칸·비둘기] L6 채권재가격',"[원인이 '연준 비둘기 발언'이면] 채권이 믿었는가")
+  .replace('[IF B칸·물가둔화] R2',"[원인이 '물가 둔화 뉴스'면] 사이클 판독")
+  .replace('[IF B칸·침체공포] L3 부호 반전 주의',"[원인이 '침체 공포'면] 역해석 주의")
+  .replace('[IF F칸·정책] L5 구리/금 22일',"[원인이 '관세·정책'이면] 구리/금 재가격")
+  .replace('[IF A칸 공통] L4','[연준 관련 공통 보조]')
+  .replace('[체크포인트]','[10일 뒤 확인]');
+}
+
+fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
+ document.getElementById('sub').textContent=`기준일 ${s.date} · 매 거래일 저녁(한국시간) 자동 갱신`;
+
+ // 경계 계기 이름 수집
+ const hotG=[],warnG=[];
+ Object.values(s.panels).forEach(p=>p.g.forEach(g=>{
+   if(g.state==='hot')hotG.push(tr(g.name)[0]);
+   else if(g.state==='warn')warnG.push(tr(g.name)[0]);
+ }));
+ let vcls='up',vtxt='평온한 하루',vsub='큰 변동 없음. 위험 신호도 켜진 것이 없습니다.';
+ if(warnG.length+hotG.length>0){
+   vcls='warn';vtxt=`평시 — 긴장 신호 ${warnG.length+hotG.length}개`;
+   vsub='긴장이 켜진 계기: <b>'+[...hotG,...warnG].join('</b>, <b>')+'</b>. 아래에서 해당 항목을 확인하세요.';
+ }
+ if(s.vix>=28){vcls='warn';vtxt='공포 국면 (VIX 28 이상)';vsub='과거 이 국면의 급락은 한 달 내 반등한 경우가 84~94%였습니다 (단, 국면 첫날은 예외가 많음).';}
+ if(s.vix>=35){vcls='down';vtxt='폭풍 — VIX 35 이상';vsub='과거 이 수준에서는 열흘 안에 반드시 큰 변동이 왔습니다 (11번 중 11번).';}
+ if(s.event){vcls='down';vtxt='⚠ 큰 변동 발생';vsub='아래 "상황별 판독"과 한 달 전망을 확인하세요.';}
  document.getElementById('verdict').innerHTML=`<div class="vbig ${vcls}">${vtxt}</div><div class="vsub">${vsub}</div>`;
 
  const up=s.ret1_pct>=0, sg=v=>(v>0?'+':'')+Number(v).toFixed(2);
@@ -98,72 +156,57 @@ fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
   `<div class="prow"><div><div class="price">${Number(s.ndx).toLocaleString()}</div>
    <div class="dim" style="font-size:.76em">나스닥100 종가</div></div>
    <div style="text-align:right">
-   <div class="${up?'up':'down'}" style="font-size:1.1em;font-weight:600">${sg(s.ret1_pct)}%</div>
-   <div class="dim" style="font-size:.8em">3일 ${sg(s.cum3_pct)}% · VIX ${S(s.vix)}</div>
-   <div class="dim" style="font-size:.78em">사건까지 일간 ${(2-Math.abs(s.ret1_pct)).toFixed(2)}%p · 3일 ${(5-Math.abs(s.cum3_pct)).toFixed(2)}%p</div></div></div>`;
+   <div class="${up?'up':'down'}" style="font-size:1.1em;font-weight:600">오늘 ${sg(s.ret1_pct)}%</div>
+   <div class="dim" style="font-size:.8em">최근 3일 ${sg(s.cum3_pct)}% · 공포지수 ${S(s.vix)}</div>
+   <div class="dim" style="font-size:.78em">"큰 변동" 기준(하루 ±2%)까지 ${(2-Math.abs(s.ret1_pct)).toFixed(2)}%p 여유</div></div></div>`;
+
+ const m=s.monthly, mc={BOUNCE:'up',NO_CALL:'warn',NO_ASSET:'warn',NONE:'dim'}[m.stance]||'dim';
+ const mLabel={BOUNCE:'반등 우세',NO_CALL:'판정 불가 — 근거 규칙 없음',NO_ASSET:'상승 급변 — 전망 규칙 없음',NONE:'큰 변동 없음 — 전망할 것 없음'}[m.stance]||m.label;
+ document.getElementById('monthly').innerHTML=
+  `<h2>한 달 전망 (검증된 규칙이 있을 때만)</h2><div class="${mc}" style="font-weight:700;font-size:1.05em">${mLabel}</div>
+   <div class="note" style="margin-top:3px">${m.why}</div>
+   <div class="note dim">※ 전망이 "없음"인 것도 정보입니다 — 근거 없는 낙관/비관을 하지 않는다는 뜻입니다.</div>`;
 
  if(s.event_cards && s.event_cards.length){
    document.getElementById('cardsPanel').style.display='block';
-   document.getElementById('cardsList').innerHTML=s.event_cards.map(c=>'· '+c.replace(/\[(.*?)\]/,'<b>[$1]</b>')).join('<br>');
+   document.getElementById('cardsList').innerHTML=s.event_cards.map(c=>'· '+trCard(c).replace(/\[(.*?)\]/,'<b>[$1]</b>')).join('<br>');
  }
- const m=s.monthly, mc={BOUNCE:'up',NO_CALL:'warn',NO_ASSET:'warn',NONE:'dim'}[m.stance]||'dim';
- document.getElementById('monthly').innerHTML=
-  `<h2>1개월 판정</h2><div class="${mc}" style="font-weight:700;font-size:1.05em">${m.label}</div>
-   <div class="note" style="margin-top:3px">${m.why}</div>`;
 
- const COMP={
-  A:`<b>구성 2코드</b>: HAWK_SHOCK 매파 서프라이즈 63건(하락 위주 48/63) · DOVE_SHOCK 비둘기 서프라이즈 23건(상승 위주 21/23).<br>
-     <b>한 묶음인 이유</b>: 방향만 반대일 뿐 발생 기전이 동일 — 연준이 시장 기대와 다른 말을 한 날. 그래서 놀람의 크기가 하나의 계기(2Y 당일 변화)로 양쪽 다 계측됩니다(#019).<br>
-     <b>상태</b>: 균질성 1차 점검 완료. 2022년 집중(약 절반)이라 시대 편중 유의.`,
-  B:`<b>구성 6코드</b>: RECESSION_FEAR 침체공포 23건 · COOL_INFL 물가둔화 16건(상승 15/16) · HOT_INFL 물가쇼크 12건 · GROWTH_SURP 성장서프라이즈 10건 · SOFT_LABOR 고용둔화 6건 · HOT_LABOR 고용과열 1건.<br>
-     <b>한 묶음인 이유</b>: 전부 '경제지표 발표일의 서프라이즈'가 방아쇠 — CPI·고용·GDP 등 지표만 다를 뿐, 채권시장(2Y)을 거쳐 주가로 전달되는 경로가 같습니다(상관 0.41, #022).<br>
-     <b>상태</b>: <span class="warn">이질성 신호</span> — 채권 매개형과 주식 자체 동학형이 혼재. 분할 후보 대기.`,
-  C:`<b>구성 4코드</b>: PANDEMIC 보건 38건 · GEOPOL 지정학 긴장 16건 · WAR 전쟁 12건 · ELECTION 선거 12건.<br>
-     <b>한 묶음인 이유</b>: 전부 경제 바깥에서 온 외생 충격 — 지표·실적·연준과 무관하게 터집니다.<br>
-     <b>상태</b>: 내부 이분 확정(#067) — 같은 칸 안에서도 계측 경로가 둘로 갈립니다. 에너지·통화형(GEOPOL·WAR)=달러 용량계(0.69)+유가 보조 / 보건형(PANDEMIC)=채권·통화 무반응, VIX 경로만 / ELECTION=표본 소진, 관찰 상한.`,
-  D:`<b>구성 4코드</b>: BANK_FAIL 은행 파산 2건 · CREDIT_STRESS 신용경색 1건 · SOVEREIGN 국가신용 1건 · FX_SHOCK 통화위기 1건.<br>
-     <b>한 묶음인 이유</b>: 금융 시스템 내부의 전염(도미노) 경로라는 공통 기전.<br>
-     <b>상태</b>: <span class="warn">합계 5건 — 통계 성립 불가, 영구 공백 명시</span>. 2020~26년에 본격 신용위기가 없었기 때문. MOVE는 관찰 계기일 뿐 검증 자산 아님.`,
-  E:`<b>구성 2코드</b>: MAG7_EARN 빅테크 실적 49건(상승 27/하락 22) · SECTOR_BLOW 섹터 붕괴 2건(전부 하락, 2026-06 신설).<br>
-     <b>한 묶음인 이유</b>: 기업 자체 뉴스가 지수를 직접 견인하는 '직접형' — 채권 매개가 없다는 점이 A·B칸과 구분되는 핵심 특징입니다. 용량계=주도주 절대등락(#021).<br>
-     <b>상태</b>: 균질성 1차 점검 완료. SECTOR_BLOW는 표본 축적 중(smh_gap이 감별 계기).`,
-  F:`<b>구성 3코드</b>: TARIFF 관세 20건(상승10/하락10) · FISCAL 재정·부양 19건(상승 16/19) · REGULATION 규제 5건(전부 하락).<br>
-     <b>한 묶음인 이유</b>: 전부 정부의 정책 결정이 방아쇠 — 시장이 아니라 정치 일정을 따라 옵니다.<br>
-     <b>상태</b>: TARIFF는 균질성 깨짐 확정 → 계산형 하위분류로 재편(#040. EPU는 시대상수라 판별력 없음 — 판별은 GEX·성장·시스템 축, #013·#015). FISCAL은 점화 단조 확인(1.65→4.50%).`,
-  G:`<b>구성 4코드</b>: MOMENTUM 콜추격 모멘텀 8건(전부 상승) · GAMMA 감마 증폭 6건 · SQUEEZE 숏스퀴즈 6건 · NO_CATALYST 무촉매 1건.<br>
-     <b>한 묶음인 이유</b>: 외부 뉴스 없이 시장 내부의 수급·기계 구조(옵션 딜러, 공매도 포지션)가 스스로 원인이 된 날들.<br>
-     <b>상태</b>: 유일하게 판정식이 있는 칸(모멘텀=SVR≤20+P/C≤0.55 / S1=SVR≥80+NSP≥80) — 단 사후 분류 전용, 예측 금지(#070). 참고: H칸(위험선호)은 주원인 금지 규칙으로 0건 유지.`,
- };
  const order=['REGIME','A','B','C','D','E','F','G'];
  document.getElementById('panels').innerHTML=order.map(k=>{
   const p=s.panels[k]; if(!p)return '';
   const anyHot=p.g.some(g=>g.state==='hot'), anyWarn=p.g.some(g=>g.state==='warn');
+  const pn=PNAME[k]||[p.title,''];
   return `<div class="card" ${anyHot?'style="border-color:#f85149"':anyWarn?'style="border-color:#d2992288"':''}>
-   <h2>${p.title}${anyHot?' <span class="tag t-hot">발동</span>':''}</h2>
-   <div class="grammar">${p.grammar}</div>
-   ${COMP[k]?`<details><summary>구성 코드와 묶음 이유 (353건 기준)</summary><div class="note">${COMP[k]}</div></details>`:''}
-   ${p.g.map(g=>`<div class="grow"><div style="flex:1"><div class="gname">${g.name}</div>
-     <div class="gread">${g.read}</div></div>
-     <div class="gval">${S(g.val)}<span class="dot d-${g.state}"></span></div></div>`).join('')}
+   <h2>${pn[0]}${anyHot?' <span class="tag t-hot">위험</span>':''}</h2>
+   <div class="note" style="margin:-2px 0 8px">${pn[1]}</div>
+   ${p.g.map(g=>{const t=tr(g.name);return `<div class="grow"><div style="flex:1"><div class="gname">${t[0]}</div>
+     <div class="gread">${t[1]||g.read}</div></div>
+     <div class="gval">${S(g.val)}<span class="dot d-${g.state}"></span></div></div>`}).join('')}
+   <details><summary>연구 원문 (전문가용)</summary><div class="note">${p.title} — ${p.grammar}<br>${p.g.map(g=>g.name+': '+g.read).join(' / ')}</div></details>
   </div>`;
  }).join('');
-}).catch(e=>document.getElementById('err').textContent='status.json 로드 실패: '+e);
+}).catch(e=>document.getElementById('err').textContent='데이터 로드 실패: '+e);
 
+// 대장 — 사건일별 1행으로 병합
 fetch('data/forward_count_ledger.csv?t='+Date.now()).then(r=>r.text()).then(t=>{
  const lines=t.replace(/^﻿/,'').trim().split(/\r?\n/);
  if(lines.length<2)return;
- const h=lines[0].split(',');
  const rows=lines.slice(1).map(l=>{
    const cells=[]; let cur='',q=false;
    for(const ch of l){ if(ch==='"'){q=!q} else if(ch===','&&!q){cells.push(cur);cur=''} else cur+=ch; }
    cells.push(cur); return cells;
  });
+ const byDate={};
+ rows.forEach(c=>{ if(!byDate[c[0]]) byDate[c[0]]=c; if(c[7]) byDate[c[0]][7]=c[7]; });
+ const uniq=Object.values(byDate).sort((a,b)=>a[0]<b[0]?1:-1).slice(0,8);
  document.getElementById('ledgerPanel').style.display='block';
  document.getElementById('ledgerT').innerHTML=
-  '<tr><th>사건일</th><th>당일</th><th>영역</th><th>fwd22 만기</th><th>실적</th></tr>'
-  +rows.slice(-8).reverse().map(c=>{
-    const f=c[7]||'대기'; const cls=f==='대기'?'dim':(parseFloat(f)>=0?'up':'down');
-    return `<tr><td>${c[0]}</td><td>${c[1]}%</td><td class="dim">${(c[2]||'').slice(0,14)}</td><td class="dim">${c[6]||''}</td><td class="${cls}">${f}${f==='대기'?'':'%'}</td></tr>`;
+  '<tr><th>큰 변동일</th><th>그날</th><th>한 달 뒤 채점일</th><th>실제 결과</th></tr>'
+  +uniq.map(c=>{
+    const f=c[7]||''; const done=f!=='';
+    const cls=!done?'dim':(parseFloat(f)>=0?'up':'down');
+    return `<tr><td>${c[0]}</td><td class="${parseFloat(c[1])>=0?'up':'down'}">${parseFloat(c[1])>0?'+':''}${c[1]}%</td><td class="dim">${c[6]||''}</td><td class="${cls}">${done?(parseFloat(f)>0?'+':'')+f+'%':'채점 대기'}</td></tr>`;
   }).join('');
 }).catch(()=>{});
 
@@ -172,12 +215,12 @@ fetch('data/daily_scorecard.csv?t='+Date.now()).then(r=>r.text()).then(t=>{
  const h=lines[0].split(',').map(x=>x.trim());
  const data=lines.slice(1).map(l=>Object.fromEntries(h.map((k,i)=>[k,(l.split(',')[i]||'').trim()])));
  document.getElementById('hist').innerHTML=
-  '<tr><th>날짜</th><th>일간</th><th>3일</th><th>VIX</th><th>smh_gap</th><th>2Y당일</th><th>사건</th></tr>'
+  '<tr><th>날짜</th><th>하루 등락</th><th>3일 누적</th><th>공포지수</th><th>큰 변동?</th></tr>'
   +data.slice(-12).reverse().map(o=>{
     const r=Number(o.ret1);
     return `<tr><td>${o.date.slice(5)}</td><td class="${r>=0?'up':'down'}">${r>0?'+':''}${o.ret1}%</td>`
-     +`<td class="dim">${o.cum3}%</td><td class="dim">${o.vix||'—'}</td><td class="dim">${o.smh_gap||'—'}</td>`
-     +`<td class="dim">${o.y2_chg1||'—'}</td><td>${o.event==='1'?'<span class="tag t-hot">사건</span>':''}</td></tr>`;
+     +`<td class="dim">${o.cum3}%</td><td class="dim">${o.vix||'—'}</td>`
+     +`<td>${o.event==='1'?'<span class="tag t-hot">발생</span>':''}</td></tr>`;
   }).join('');
 }).catch(()=>{});
 </script>
