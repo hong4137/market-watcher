@@ -384,6 +384,7 @@ status = {
  'updated_utc': datetime.utcnow().isoformat() + 'Z', 'date': today,
  'ndx': ndx[today], 'ret1_pct': round(ret1, 2), 'cum3_pct': round(cum3, 2),
  'event': event, 'vix': v, 'monthly': monthly, 'panels': panels, 'collect_log': log,
+ 'event_cards': [],
 }
 with open(f'{D}/status.json', 'w', encoding='utf-8') as f:
     json.dump(status, f, ensure_ascii=False, indent=1)
@@ -399,6 +400,25 @@ if not any(r['date'] == today for r in sc):
                'move_curve_pct': mc_pct})
     save_csv(sc_path, sc, list(sc[-1].keys()))
 
+# ==== 대장 자동 채점기 (매일 실행 — 만기 도래분 fwd22 자동 기입) ====
+try:
+    led_p = f'{D}/forward_count_ledger.csv'
+    led = load_csv(led_p)
+    nd_sorted = sorted(ndx); nd_pos = {d0: i for i, d0 in enumerate(nd_sorted)}
+    changed = False
+    for row_ in led:
+        if row_.get('fwd22_actual'): continue
+        ev_d = row_.get('date', '')
+        i0 = nd_pos.get(ev_d)
+        if i0 is not None and i0 + 22 < len(nd_sorted):
+            f22v = round(100 * (ndx[nd_sorted[i0 + 22]] / ndx[nd_sorted[i0]] - 1), 2)
+            row_['fwd22_actual'] = f22v; changed = True
+            note(f'대장 채점: {ev_d} fwd22 {f22v:+.2f}%')
+    if changed:
+        save_csv(led_p, led, list(led[0].keys()))
+except Exception as e:
+    note(f'대장 채점 실패: {e}')
+
 msg = None
 if event:
     # ==== 사전등록 카드 판독 (preregistration_20260808.md — 산식 동결) ====
@@ -410,7 +430,7 @@ if event:
         exd = lambda nm: {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/{nm}.csv')}
         mvf = exd('move_full'); y10h = exd('y10_hist'); y3h = exd('y3m_hist'); v9 = exd('vix9d')
         cpf = exd('copper'); gdf = exd('gold')
-        def _asof(s, d0, back=12):
+        def _asof(s, d0, back=28):  # MOVE 등 지연 게시 원천 대비 소급 4주
             y_, m_, dd_ = map(int, d0.split('-')); t_ = date(y_, m_, dd_)
             for b in range(back):
                 k = (t_ - timedelta(days=b)).isoformat()
@@ -433,12 +453,48 @@ if event:
         L1v = min(vp, epu_pct) if (vp is not None and epu_pct is not None) else None
         L1p_v = (L1v - min(mp, cp2)) if (L1v is not None and mp is not None and cp2 is not None) else None
         L3v = (min(mp, cp2) - t9p) if (mp is not None and cp2 is not None and t9p is not None) else None
+        # v0.5 확장: L4·L6·R2·종합점수 (카드집 v1.8 전면 구현)
+        skf = exd('skew'); sk_ = _asof(skf, today)
+        skp = _pctile_of(skf, sk_) if sk_ else None
+        L4v = min(mp, skp) if (mp is not None and skp is not None) else None
+        r10 = exd('real10y'); ef_ = exd('effr')
+        y10t = _asof(y10h, today); r10t = _asof(r10, today)
+        bei_t = (y10t - r10t) if (y10t is not None and r10t is not None) else None
+        y10p7 = _asof(y10h, (date(yy_, mm_, dd2) - timedelta(days=7)).isoformat())
+        r10p7 = _asof(r10, (date(yy_, mm_, dd2) - timedelta(days=7)).isoformat())
+        bei5 = round(bei_t - (y10p7 - r10p7), 3) if (bei_t is not None and y10p7 is not None and r10p7 is not None) else None
+        y10prev = _asof(y10h, (date(yy_, mm_, dd2) - timedelta(days=4)).isoformat())
+        y10c1 = round(abs(y10t - y10prev), 3) if (y10t is not None and y10prev is not None) else None
+        L6_ok = (bei5 is not None and bei5 >= 0.05) or (y10c1 is not None and y10c1 >= 0.08)
+        # R2: 사이클 게이지 + 로테이션 감별
+        y2t = None
+        try:
+            trec = load_csv(f'{D}/treasury.csv')
+            y2t = float([r_ for r_ in trec if r_.get('Y2')][-1]['Y2'])
+        except Exception: pass
+        eft = _asof(ef_, today)
+        cyc = round(y2t - eft, 2) if (y2t is not None and eft is not None) else None
+        qqe = exd('qqqe'); qq = exd('qqq')
+        qgap = None
+        try:
+            prevd = (date(yy_, mm_, dd2) - timedelta(days=4)).isoformat()
+            qgap = round(100 * (_asof(qqe, today) / _asof(qqe, prevd) - 1) - 100 * (_asof(qq, today) / _asof(qq, prevd) - 1), 2)
+        except Exception: pass
+        rot = (qgap is not None and qgap > 1) and (sg is not None and sg < 0)
+        score = None
+        if all(x is not None for x in [L1v, t9p, mp, cp2]):
+            score = L1v + t9p - min(mp, cp2)
+        # 카드 문안 — 칸별 조건부 시나리오 (태깅 전 병렬 표시)
         cards = [
-            f"P1_L2': 결합백분위 {mc_pct} → {'위험' if (mc_pct or 0) >= 80 else ('안전' if (mc_pct or 99) <= 20 else '중립')} (VIX<28 하락만 카운트)",
-            f"P2_L1: min(VIX백분위 {vp}, EPU백분위 {epu_pct}) = {L1v} → {'항복(카운트)' if (L1v or 0) >= 80 else '미달'}",
-            f"P3_L1': {L1p_v} (서열 적립)",
-            f"P4_L3(태깅 후): min(MOVE {mp}, 커브 {cp2}) − T9 {t9p} = {L3v}",
-            f"P6_L5(태깅 후): CU22 {cu22}%",
+            f"[상시] L2' 결합백분위 {mc_pct} → {'위험' if (mc_pct or 0) >= 80 else ('안전' if (mc_pct or 99) <= 20 else '중립')} (저VIX 하락 전용)",
+            f"[전칸] L1 항복점수 min(VIX백분위 {vp}, EPU백분위 {epu_pct}) = {L1v} → {'항복(반등 우세)' if (L1v or 0) >= 80 else '미달'} | L1' {L1p_v} | 종합회복점수 {score}",
+            f"[IF A칸·매파] L3 = min(MOVE {mp}, 커브 {cp2}) − T9 {t9p} = {L3v} → {'위험(회복 열위)' if (L3v or -99) > 30 else '중립·회복 여지'} ※매파 상승이면 R1(되돌림 우세)",
+            f"[IF A칸·비둘기] L6 채권재가격: BEI5 {bei5}pp·|Y10c1| {y10c1}pp → {'재가격 실재(지속 우세)' if L6_ok else '무반응 말잔치(fake 경계)'}",
+            f"[IF B칸·물가둔화] R2: Y2−EFFR {cyc} → {'종점·인하기(지속 우세)' if (cyc is not None and cyc <= 0.25) else '긴축기(fake 경계)'} | 로테이션(QQQE_gap {qgap}·smh_gap {sg}) → {'⚠fake 감별 발동' if rot else '정상'}",
+            f"[IF B칸·침체공포] L3 부호 반전 주의: 채권 스트레스=가격 완료=반등 신호 (L3값 {L3v} 역독)",
+            f"[IF F칸·정책] L5 구리/금 22일 {cu22}% → {'재가격 완료(반등 우세)' if (cu22 is not None and cu22 < -3) else ('미완(정체 경계)' if (cu22 is not None and cu22 > 3) else '중립')}",
+            f"[IF A칸 공통] L4 = min(MOVE {mp}, SKEW백분위 {skp}) = {L4v} (2023~ 약화 — 참고)",
+            f"[체크포인트] 10거래일 뒤 사건일 종가 대비 음수면 fake 분류 확정 (대장 자동 채점)",
         ]
         led_p = f'{D}/forward_count_ledger.csv'
         led = load_csv(led_p)
@@ -459,6 +515,13 @@ if event:
                     ['다음: 세션 열어 루프 A 태깅 (원인 확정은 리서치로)'])
     with open(f'{D}/briefing_{today}.md', 'w', encoding='utf-8') as f:
         f.write(msg)
+    # status.json에 카드 반영 (재기록)
+    try:
+        status['event_cards'] = cards
+        with open(f'{D}/status.json', 'w', encoding='utf-8') as f:
+            json.dump(status, f, ensure_ascii=False, indent=1)
+    except Exception as e:
+        note(f'status 카드 재기록 실패: {e}')
 elif v is not None and v >= 35:
     msg = f"[확진] {today} VIX {v} ≥35 — 10일 내 사건 사실상 확정(#072)"
 elif v1y is not None and v1y >= 90:

@@ -50,6 +50,15 @@
 <div class="card verdict" id="verdict"></div>
 <div class="card" id="priceCard"></div>
 <div class="card" id="monthly"></div>
+<div class="card" id="cardsPanel" style="display:none;border-color:#d29922">
+ <h2>사건일 카드 판독 (사전등록 v1.8 — 칸 확정 전 조건부 병렬)</h2>
+ <div id="cardsList" class="note" style="line-height:1.9"></div>
+</div>
+<div class="card" id="ledgerPanel" style="display:none">
+ <h2>전방 카운트 대장 (자동 채점)</h2>
+ <table id="ledgerT"></table>
+ <div class="note">만기(22거래일) 도래 시 fwd22 자동 기입. 트리거 도달 시 승격 상정.</div>
+</div>
 
 <div class="legend">● 초록 중립 · ● 노랑 경계 · ● 빨강 발동 · ● 회색 결측/휴면</div>
 <div id="panels"></div>
@@ -93,6 +102,10 @@ fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
    <div class="dim" style="font-size:.8em">3일 ${sg(s.cum3_pct)}% · VIX ${S(s.vix)}</div>
    <div class="dim" style="font-size:.78em">사건까지 일간 ${(2-Math.abs(s.ret1_pct)).toFixed(2)}%p · 3일 ${(5-Math.abs(s.cum3_pct)).toFixed(2)}%p</div></div></div>`;
 
+ if(s.event_cards && s.event_cards.length){
+   document.getElementById('cardsPanel').style.display='block';
+   document.getElementById('cardsList').innerHTML=s.event_cards.map(c=>'· '+c.replace(/\[(.*?)\]/,'<b>[$1]</b>')).join('<br>');
+ }
  const m=s.monthly, mc={BOUNCE:'up',NO_CALL:'warn',NO_ASSET:'warn',NONE:'dim'}[m.stance]||'dim';
  document.getElementById('monthly').innerHTML=
   `<h2>1개월 판정</h2><div class="${mc}" style="font-weight:700;font-size:1.05em">${m.label}</div>
@@ -135,6 +148,24 @@ fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
   </div>`;
  }).join('');
 }).catch(e=>document.getElementById('err').textContent='status.json 로드 실패: '+e);
+
+fetch('data/forward_count_ledger.csv?t='+Date.now()).then(r=>r.text()).then(t=>{
+ const lines=t.replace(/^﻿/,'').trim().split(/\r?\n/);
+ if(lines.length<2)return;
+ const h=lines[0].split(',');
+ const rows=lines.slice(1).map(l=>{
+   const cells=[]; let cur='',q=false;
+   for(const ch of l){ if(ch==='"'){q=!q} else if(ch===','&&!q){cells.push(cur);cur=''} else cur+=ch; }
+   cells.push(cur); return cells;
+ });
+ document.getElementById('ledgerPanel').style.display='block';
+ document.getElementById('ledgerT').innerHTML=
+  '<tr><th>사건일</th><th>당일</th><th>영역</th><th>fwd22 만기</th><th>실적</th></tr>'
+  +rows.slice(-8).reverse().map(c=>{
+    const f=c[7]||'대기'; const cls=f==='대기'?'dim':(parseFloat(f)>=0?'up':'down');
+    return `<tr><td>${c[0]}</td><td>${c[1]}%</td><td class="dim">${(c[2]||'').slice(0,14)}</td><td class="dim">${c[6]||''}</td><td class="${cls}">${f}${f==='대기'?'':'%'}</td></tr>`;
+  }).join('');
+}).catch(()=>{});
 
 fetch('data/daily_scorecard.csv?t='+Date.now()).then(r=>r.text()).then(t=>{
  const lines=t.replace(/^﻿/,'').trim().split(/\r?\n/);
