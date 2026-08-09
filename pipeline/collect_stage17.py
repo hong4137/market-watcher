@@ -27,6 +27,8 @@ FRED_SERIES = [
     ('DGS1', 'y1'), ('DGS2', 'y2_hist'), ('DFF', 'effr_full'),
     ('BAMLH0A0HYM2', 'hy_oas_full'), ('BAMLC0A0CM', 'ig_oas_full'),
     ('BAMLH0A3HYC', 'ccc_oas'), ('WLCFLPCL', 'disc_window'), ('TOTCI', 'ci_loans'), ('DRTSCILM', 'sloos_ci'),
+    ('DCPF3M', 'cp3m'), ('DTB3', 'tb3m'), ('NFCICREDIT', 'nfci_credit'), ('NFCILEVERAGE', 'nfci_lev'),
+    ('NFCIRISK', 'nfci_risk'), ('COMPOUT', 'cp_out'), ('TOTBKCR', 'bank_credit'),
     ('DBAA', 'baa_full'), ('DAAA', 'aaa_full'),
 ]
 for sid, name in FRED_SERIES:
@@ -47,6 +49,9 @@ YAHOO_SYMS = [
     ('ARCC', 'arcc'), ('BIZD', 'bizd'), ('FSK', 'fsk'), ('MAIN', 'main_bdc'), ('PSEC', 'psec'),
     ('APO', 'apo'), ('ARES', 'ares'), ('OWL', 'owl'), ('BX', 'bx'), ('KKR', 'kkr'),
     ('JAAA', 'jaaa'), ('JBBB', 'jbbb'), ('BKLN', 'bkln'), ('SRLN', 'srln'),
+    ('VWEHX', 'vwehx'), ('FAGIX', 'fagix'), ('PFF', 'pff'), ('REM', 'rem'),
+    ('ANGL', 'angl'), ('EMB', 'emb'), ('CWB', 'cwb'), ('KIE', 'kie'),
+    ('IAI', 'iai'), ('KBWB', 'kbwb'), ('IEF', 'ief'), ('SHY', 'shy'),
 ]
 for sym, name in YAHOO_SYMS:
     try:
