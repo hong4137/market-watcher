@@ -25,10 +25,11 @@ FRED_SERIES = [
     ('UNRATE', 'unrate'), ('PAYEMS', 'payems'), ('JTSJOL', 'jolts'),
     ('CES0500000003', 'ahe'), ('CPIAUCSL', 'cpi_idx'), ('UMCSENT', 'umcsent'),
     ('DGS1', 'y1'), ('DGS2', 'y2_hist'), ('DFF', 'effr_full'),
+    ('BAMLH0A0HYM2', 'hy_oas_full'), ('BAMLC0A0CM', 'ig_oas_full'),
 ]
 for sid, name in FRED_SERIES:
     try:
-        j = json.loads(get(f'https://api.stlouisfed.org/fred/series/observations?series_id={sid}&api_key={FRED}&file_type=json&observation_start=2013-01-01'))
+        j = json.loads(get(f'https://api.stlouisfed.org/fred/series/observations?series_id={sid}&api_key={FRED}&file_type=json&observation_start=1996-12-01'))
         rows = [[o['date'], float(o['value'])] for o in j['observations'] if o['value'] != '.']
         save(name, rows)
     except Exception as e:
