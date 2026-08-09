@@ -24,7 +24,7 @@ FRED_SERIES = [
     ('STLFSI4', 'stlfsi'), ('ANFCI', 'anfci'), ('MICH', 'mich_infl'),
     ('UNRATE', 'unrate'), ('PAYEMS', 'payems'), ('JTSJOL', 'jolts'),
     ('CES0500000003', 'ahe'), ('CPIAUCSL', 'cpi_idx'), ('UMCSENT', 'umcsent'),
-    ('DGS1', 'y1'), ('DGS2', 'y2_hist'),
+    ('DGS1', 'y1'), ('DGS2', 'y2_hist'), ('DFF', 'effr_full'),
 ]
 for sid, name in FRED_SERIES:
     try:
