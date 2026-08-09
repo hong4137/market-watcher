@@ -328,12 +328,38 @@ try:
 except Exception as e:
     note(f"MOVE×커브 게이지 실패: {e}")
 
+# ---- B칸 분할 게이지 (2026-08-09 사용자 판정: B1 거시지표 / B2 침체공포) ----
+cyc_gap = None; cu22v = None
+try:
+    _tre2 = {r['Date']: float(r['Y2']) for r in load_csv(f'{D}/treasury.csv') if r.get('Y2')}
+    _efr2 = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/effr.csv')}
+    def _asofP(s, d0, back=14):
+        yy0, mm0, dd0 = map(int, d0.split('-')); t0 = date(yy0, mm0, dd0)
+        for b in range(back):
+            k = (t0 - timedelta(days=b)).isoformat()
+            if k in s: return s[k]
+        return None
+    _a = _asofP(_tre2, today); _b = _asofP(_efr2, today)
+    if _a is not None and _b is not None: cyc_gap = round(_a - _b, 2)
+    _cop = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/copper.csv')}
+    _gld = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/gold.csv')}
+    _c1 = _asofP(_cop, today); _g1 = _asofP(_gld, today)
+    _d30 = (date(*map(int, today.split('-'))) - timedelta(days=30)).isoformat()
+    _c0 = _asofP(_cop, _d30); _g0 = _asofP(_gld, _d30)
+    if all(x is not None for x in (_c1, _g1, _c0, _g0)) and _g1 and _g0:
+        cu22v = round(100 * ((_c1 / _g1) / (_c0 / _g0) - 1), 1)
+except Exception as e:
+    note(f'B분할 게이지 실패: {e}')
+
 panels = {
  'A': {'title': 'A 통화정책 (86건)', 'grammar': '서프라이즈 용량 반응 — 2Y 당일 변화가 출력과 단조(#019). 큰 |2Y당일|이 곧 사건 용량.',
    'g': [gauge('2Y 당일 변화(pp)', y2c1, '±0.10 이상이면 서프라이즈 급', st(y2c1 is not None and abs(y2c1) >= 0.10, missing=y2c1 is None)),
          gauge('2Y 5일 변화(pp)', y2c5, '누적 재가격 방향', 'na' if y2c5 is None else 'ok')]},
- 'B': {'title': 'B 거시지표 (68건)', 'grammar': '채권 매개형 — 2Y 당일 상관 0.41(#022). 단 주식 자체 동학형 혼재(이질성 미해결).',
-   'g': [gauge('2Y 당일 변화(pp)', y2c1, 'A칸과 계기 공유', 'na' if y2c1 is None else 'ok'),
+ 'B1': {'title': 'B1 거시지표 (45건)', 'grammar': '사이클 지배(카드11) — 지표 내용(핫/쿨/호조/둔화)보다 사이클 위치가 1개월을 결정. 긴축기 상승사건 전패급. 10일 체크포인트 정합 89%. 2022 적재 명기, 홀드아웃 카운트 중(P8 포함).',
+   'g': [gauge('Y2−EFFR 사이클 게이지(pp)', cyc_gap, '≤+0.25 완화·종점(지표 사건 우호) / >+0.25 긴축(경계)', st(cyc_gap is not None and cyc_gap > 0.25, missing=cyc_gap is None)),
+         gauge('2Y 당일 변화(pp)', y2c1, 'A칸과 계기 공유', 'na' if y2c1 is None else 'ok')]},
+ 'B2': {'title': 'B2 침체공포 (23건)', 'grammar': '재가격 문법 — 사이클 규칙 무효(오히려 역행: 긴축기에 기준선보다 우위). 구리/금 급락 후 사건=항복 국면(카드8), L3 부호 반전(+0.45 역독).',
+   'g': [gauge('구리/금 22일 변화(%)', cu22v, '큰 음수(이미 급락)면 침체 재가격 완료 — 사건 시 반등 우세', 'na' if cu22v is None else 'ok'),
          gauge('10Y 당일 변화(pp)', y10c1, '장기 재가격', 'na' if y10c1 is None else 'ok')]},
  'C': {'title': 'C 지정학·충격 (78건)', 'grammar': '에너지·통화형=달러 용량계(상관 0.69)·유가 보조. 보건형=VIX 경로만. 방향 비대칭: 고조 달러 0.57 / 완화 방출 0.33(#080).',
    'g': [gauge('달러 당일 %', dxc1, '급등=고조 용량', st(dxc1 is not None and abs(dxc1) >= 0.5, missing=dxc1 is None)),
@@ -543,8 +569,8 @@ if event:
             f"[전칸] L1 항복점수 min(VIX백분위 {vp}, EPU백분위 {epu_pct}) = {L1v} → {'항복(반등 우세)' if (L1v or 0) >= 80 else '미달'} | L1' {L1p_v} | 종합회복점수 {score}",
             f"[IF A칸·매파] L3 = min(MOVE {mp}, 커브 {cp2}) − T9 {t9p} = {L3v} → {'위험(회복 열위)' if (L3v or -99) > 30 else '중립·회복 여지'} ※매파 상승이면 R1(되돌림 우세)",
             f"[IF A칸·비둘기] L6 채권재가격: BEI5 {bei5}pp·|Y10c1| {y10c1}pp → {'재가격 실재(지속 우세)' if L6_ok else '무반응 말잔치(fake 경계)'}",
-            f"[IF B칸·물가둔화] R2: Y2−EFFR {cyc} → {'종점·인하기(지속 우세)' if (cyc is not None and cyc <= 0.25) else '긴축기(fake 경계)'} | 로테이션(QQQE_gap {qgap}·smh_gap {sg}) → {'⚠fake 감별 발동' if rot else '정상'}",
-            f"[IF B칸·침체공포] L3 부호 반전 주의: 채권 스트레스=가격 완료=반등 신호 (L3값 {L3v} 역독)",
+            f"[IF B1·물가둔화] R2: Y2−EFFR {cyc} → {'종점·인하기(지속 우세)' if (cyc is not None and cyc <= 0.25) else '긴축기(fake 경계)'} | 로테이션(QQQE_gap {qgap}·smh_gap {sg}) → {'⚠fake 감별 발동' if rot else '정상'}",
+            f"[IF B2·침체공포] L3 부호 반전 주의: 채권 스트레스=가격 완료=반등 신호 (L3값 {L3v} 역독)",
             f"[IF F칸·정책] L5 구리/금 22일 {cu22}% → {'재가격 완료(반등 우세)' if (cu22 is not None and cu22 < -3) else ('미완(정체 경계)' if (cu22 is not None and cu22 > 3) else '중립')}",
             f"[IF A칸 공통] L4 = min(MOVE {mp}, SKEW백분위 {skp}) = {L4v} (2023~ 약화 — 참고)",
             f"[체크포인트] 10거래일 뒤 사건일 종가 대비 음수면 fake 분류 확정 (대장 자동 채점)",
