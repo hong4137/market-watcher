@@ -26,6 +26,7 @@ FRED_SERIES = [
     ('CES0500000003', 'ahe'), ('CPIAUCSL', 'cpi_idx'), ('UMCSENT', 'umcsent'),
     ('DGS1', 'y1'), ('DGS2', 'y2_hist'), ('DFF', 'effr_full'),
     ('BAMLH0A0HYM2', 'hy_oas_full'), ('BAMLC0A0CM', 'ig_oas_full'),
+    ('BAMLH0A3HYC', 'ccc_oas'), ('WLCFLPCL', 'disc_window'), ('TOTCI', 'ci_loans'), ('DRTSCILM', 'sloos_ci'),
     ('DBAA', 'baa_full'), ('DAAA', 'aaa_full'),
 ]
 for sid, name in FRED_SERIES:
@@ -43,6 +44,9 @@ YAHOO_SYMS = [
     ('USO', 'uso'), ('DBA', 'dba'), ('UUP', 'uup'), ('EEM', 'eem'),
     ('FXI', 'fxi'), ('GDX', 'gdx'), ('VNQ', 'vnq'), ('RSP', 'rsp'),
     ('NG=F', 'natgas'), ('^GSPC', 'spx'),
+    ('ARCC', 'arcc'), ('BIZD', 'bizd'), ('FSK', 'fsk'), ('MAIN', 'main_bdc'), ('PSEC', 'psec'),
+    ('APO', 'apo'), ('ARES', 'ares'), ('OWL', 'owl'), ('BX', 'bx'), ('KKR', 'kkr'),
+    ('JAAA', 'jaaa'), ('JBBB', 'jbbb'), ('BKLN', 'bkln'), ('SRLN', 'srln'),
 ]
 for sym, name in YAHOO_SYMS:
     try:
