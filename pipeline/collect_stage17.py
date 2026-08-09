@@ -26,6 +26,7 @@ FRED_SERIES = [
     ('CES0500000003', 'ahe'), ('CPIAUCSL', 'cpi_idx'), ('UMCSENT', 'umcsent'),
     ('DGS1', 'y1'), ('DGS2', 'y2_hist'), ('DFF', 'effr_full'),
     ('BAMLH0A0HYM2', 'hy_oas_full'), ('BAMLC0A0CM', 'ig_oas_full'),
+    ('DBAA', 'baa_full'), ('DAAA', 'aaa_full'),
 ]
 for sid, name in FRED_SERIES:
     try:
@@ -52,5 +53,23 @@ for sym, name in YAHOO_SYMS:
         save(name, rows)
     except Exception as e:
         print(f'{name} 실패: {e}')
+
+
+# OFR FSI 신용 서브지수 (전 역사)
+try:
+    txt = get('https://www.financialresearch.gov/financial-stress-index/data/fsi.csv')
+    import io as _io
+    rows = []
+    rd = csv.DictReader(_io.StringIO(txt))
+    cred_col = None
+    for fn in (rd.fieldnames or []):
+        if fn and fn.strip().lower() == 'credit': cred_col = fn
+    for r in rd:
+        d0 = r.get('Date') or r.get('date')
+        try: rows.append([d0, float(r[cred_col])])
+        except Exception: pass
+    save('ofr_credit', rows)
+except Exception as e:
+    print(f'ofr_credit 실패: {e}')
 
 print('17단계 수집 완료')
