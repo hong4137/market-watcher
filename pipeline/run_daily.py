@@ -328,6 +328,35 @@ try:
 except Exception as e:
     note(f"MOVE×커브 게이지 실패: {e}")
 
+# ---- D칸 신용 조기경보 게이지 (32c, 관찰 등급 — 사전등록 전 판정 자산 아님) ----
+cred_spread = None; cred_state = None; hy22 = None; ocr22 = None
+try:
+    _baa = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/baa_full.csv')}
+    for r in load_csv(f'{D}/ext/baa.csv'): _baa[r['Date']] = float(r['Close'])
+    _aaa = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/aaa_full.csv')}
+    for r in load_csv(f'{D}/ext/aaa.csv'): _aaa[r['Date']] = float(r['Close'])
+    _sp = {d0: _baa[d0] - _aaa[d0] for d0 in _baa if d0 in _aaa}
+    _sd = sorted(_sp)
+    if len(_sd) > 300:
+        cred_spread = round(_sp[_sd[-1]], 2)
+        _vals = [_sp[d0] for d0 in _sd]
+        _ma200 = sum(_vals[-200:]) / 200
+        _ma200_prev = sum(_vals[-266:-66]) / 200 if len(_vals) >= 266 else _ma200
+        _med = sorted(_vals)[len(_vals) // 2]
+        _slope = _ma200 - _ma200_prev
+        if cred_spread > _ma200 and _slope > 0.02:
+            cred_state = '초입 경보 (수준 낮음·상승 전환)' if cred_spread < _med else '전환 후기'
+        else:
+            cred_state = '비점등'
+    _hy = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/hy_oas.csv')}
+    _hs = sorted(_hy)
+    if len(_hs) > 30: hy22 = round(_hy[_hs[-1]] - _hy[_hs[-16]], 2)
+    _oc = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/ofr_credit.csv')}
+    _os = sorted(_oc)
+    if len(_os) > 30: ocr22 = round(_oc[_os[-1]] - _oc[_os[-16]], 2)
+except Exception as e:
+    note(f'신용 경보 게이지 실패: {e}')
+
 # ---- B칸 분할 게이지 (2026-08-09 사용자 판정: B1 거시지표 / B2 침체공포) ----
 cyc_gap = None; cu22v = None
 try:
@@ -367,7 +396,10 @@ panels = {
          gauge('EPU 역사 백분위', epu_pct, '정책·확전 소음 수준', st(epu_pct is not None and epu_pct >= 90, missing=epu_pct is None))]},
  'D': {'title': 'D 신용·시스템 (5건)', 'grammar': '표본 5건 — 식 검증 불가. 봉인 관찰(32단계): 2020년대 신용 사건 5/5가 한 달 양수(정책 즉시 개입 시대), 항복 축은 VIX가 아니라 MOVE·OFR(SVB는 VIX 23에 MOVE 170), 저VIX 경고·10일 체크포인트 이식 불가.',
    'g': [gauge('MOVE', move_d and ys['move'][move_d], '채권 발작 온도계', st(move_d is not None and ys['move'][move_d] >= 120, missing=move_d is None)),
-         gauge('MOVE 5일 변화', move_c5, '급등=시스템 경계', 'na' if move_c5 is None else 'ok')]},
+         gauge('MOVE 5일 변화', move_c5, '급등=시스템 경계', 'na' if move_c5 is None else 'ok'),
+         gauge('신용 스프레드 (BAA−AAA)', cred_spread, f'사이클 상태: {cred_state or "계산 불가"} — 낮은 수준에서 상승 전환하면 역사적으로 6개월 열위(명중 2000·01·18·22 / 실패 1998·2005 급속완화기). 관찰 등급', 'na' if cred_spread is None else ('warn' if (cred_state or '').startswith('초입') else 'ok')),
+         gauge('하이일드 스프레드 22일 변화(pp)', hy22, '급확대=신용 재가격 진행(②③상한 경계) — 사모신용 사각 주의', st(hy22 is not None and hy22 >= 0.4, missing=hy22 is None)),
+         gauge('OFR 신용 서브지수 22일 변화', ocr22, '+0.3 이상이며 VIX 평온하면 2007형 괴리 관찰', st(ocr22 is not None and ocr22 >= 0.3, missing=ocr22 is None))]},
  'E': {'title': 'E 빅테크 실적·섹터 (51건)', 'grammar': '직접형 — 주도주 절대등락 단조(#021). E.SECTOR_BLOW: SMH가 출력의 ~2배(#085).',
    'g': [gauge('smh_gap (SMH−NDX)', sg, '큰 음수=반도체발. 동시 판독 전용(전조 아님)', st(sg is not None and abs(sg) >= 2, cond_hot=sg is not None and sg <= -3, missing=sg is None))]},
  'F': {'title': 'F 무역·재정·정책 (44건)', 'grammar': '관세: EPU는 시대상수(#015) — 판별은 GEX·성장·시스템(#013). FISCAL: 점화 단조 1.65→4.50%.',

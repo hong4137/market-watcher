@@ -31,7 +31,8 @@ for name, sid in FULL.items():
 for sid, name in [('BAMLH0A0HYM2', 'hy_oas'), ('BAMLC0A0CM', 'ig_oas'),
                   ('DFII10', 'real10y'), ('DGS3MO', 'y3m'), ('DGS10', 'y10_full'),
                   ('DGS30', 'y30'), ('DGS5', 'y5'), ('T5YIFR', 't5yifr'),
-                  ('ICSA', 'claims'), ('NFCI', 'nfci'), ('DFF', 'effr')]:
+                  ('ICSA', 'claims'), ('NFCI', 'nfci'), ('DFF', 'effr'),
+                  ('DBAA', 'baa'), ('DAAA', 'aaa')]:
     try:
         j = json.loads(get(f'https://api.stlouisfed.org/fred/series/observations?series_id={sid}&api_key={FRED}&file_type=json&observation_start=2019-06-01'))
         rows = [[o['date'], float(o['value'])] for o in j['observations'] if o['value'] != '.']
@@ -67,6 +68,22 @@ for sym, name in [('GC=F', 'gold'), ('BTC-USD', 'btc'), ('QQQE', 'qqqe'), ('QQQ'
         save(name, rows, ['Date', 'Close'])
     except Exception as e:
         print(f'{name} 실패: {e}')
+
+# OFR 신용 서브지수 (일일)
+try:
+    txt = get('https://www.financialresearch.gov/financial-stress-index/data/fsi.csv')
+    rows = []
+    rd = csv.DictReader(io.StringIO(txt))
+    cred = None
+    for fn in (rd.fieldnames or []):
+        if fn and fn.strip().lower() == 'credit': cred = fn
+    for r in rd:
+        d0 = r.get('Date') or r.get('date')
+        try: rows.append([d0, float(r[cred])])
+        except Exception: pass
+    save('ofr_credit', rows, ['Date', 'Close'])
+except Exception as e:
+    print(f'ofr_credit 실패: {e}')
 
 # OFR 금융스트레스지수
 try:
