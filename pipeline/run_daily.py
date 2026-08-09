@@ -329,7 +329,16 @@ except Exception as e:
     note(f"MOVE×커브 게이지 실패: {e}")
 
 # ---- D칸 신용 조기경보 게이지 (32c, 관찰 등급 — 사전등록 전 판정 자산 아님) ----
-cred_spread = None; cred_state = None; hy22 = None; ocr22 = None; bdc_r66 = None; clo_r22 = None
+cred_spread = None; cred_state = None; hy22 = None; ocr22 = None; bdc_r66 = None; clo_r22 = None; nfci_lev_v = None; lev_state = None
+try:
+    _lv = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/nfci_lev.csv')}
+    _cr2 = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/nfci_credit.csv')}
+    _k1 = sorted(_lv); _k2 = sorted(_cr2)
+    if _k1 and _k2:
+        nfci_lev_v = round(_lv[_k1[-1]], 2)
+        lev_state = '느슨한 신용+과잉 레버리지 (취약 배경)' if (nfci_lev_v >= 0.1 and _cr2[_k2[-1]] <= nfci_lev_v) else '보통'
+except Exception as e:
+    note(f'NFCI 게이지 실패: {e}')
 try:
     _arc = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/arcc.csv')}
     _spq = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/spx.csv')}
@@ -418,7 +427,8 @@ panels = {
          gauge('하이일드 스프레드 22일 변화(pp)', hy22, '급확대=신용 재가격 진행(②③상한 경계) — 사모신용 사각 주의', st(hy22 is not None and hy22 >= 0.4, missing=hy22 is None)),
          gauge('OFR 신용 서브지수 22일 변화', ocr22, '+0.3 이상이며 VIX 평온하면 2007형 괴리 관찰', st(ocr22 is not None and ocr22 >= 0.3, missing=ocr22 is None)),
          gauge('BDC 상대강도 66일 (ARCC−SPX, %p)', bdc_r66, '사모신용의 공개 시가평가 — 감별 전용(타이밍 예측 기각): ≤−8이면 사모신용 스트레스 진행. 신용 사건 시 진원지 판독(2007·2015·2025 점등 / GE·헝다 비점등)', st(bdc_r66 is not None and bdc_r66 <= -8, missing=bdc_r66 is None)),
-         gauge('CLO 메자닌 상대 22일 (JBBB−JAAA, %p)', clo_r22, '레버리지론 하위등급 약세 = 사모신용 인접 스트레스 (감별 보조)', st(clo_r22 is not None and clo_r22 <= -1, missing=clo_r22 is None))]},
+         gauge('CLO 메자닌 상대 22일 (JBBB−JAAA, %p)', clo_r22, '레버리지론 하위등급 약세 = 사모신용 인접 스트레스 (감별 보조)', st(clo_r22 is not None and clo_r22 <= -1, missing=clo_r22 is None)),
+         gauge('NFCI 레버리지 서브지수', nfci_lev_v, f'취약성 배경(관찰): {lev_state or "?"} — 과잉 레버리지+느슨한 신용 국면의 평온기는 이후 3개월 열위(55% vs 76%, 2013~19 집중 시대 의존 명기)', st(nfci_lev_v is not None and (lev_state or '').startswith('느슨'), missing=nfci_lev_v is None))]},
  'E': {'title': 'E 빅테크 실적·섹터 (51건)', 'grammar': '직접형 — 주도주 절대등락 단조(#021). E.SECTOR_BLOW: SMH가 출력의 ~2배(#085).',
    'g': [gauge('smh_gap (SMH−NDX)', sg, '큰 음수=반도체발. 동시 판독 전용(전조 아님)', st(sg is not None and abs(sg) >= 2, cond_hot=sg is not None and sg <= -3, missing=sg is None))]},
  'F': {'title': 'F 무역·재정·정책 (44건)', 'grammar': '관세: EPU는 시대상수(#015) — 판별은 GEX·성장·시스템(#013). FISCAL: 점화 단조 1.65→4.50%.',
