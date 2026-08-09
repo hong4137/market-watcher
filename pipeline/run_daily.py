@@ -329,7 +329,24 @@ except Exception as e:
     note(f"MOVE×커브 게이지 실패: {e}")
 
 # ---- D칸 신용 조기경보 게이지 (32c, 관찰 등급 — 사전등록 전 판정 자산 아님) ----
-cred_spread = None; cred_state = None; hy22 = None; ocr22 = None
+cred_spread = None; cred_state = None; hy22 = None; ocr22 = None; bdc_r66 = None; clo_r22 = None
+try:
+    _arc = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/arcc.csv')}
+    _spq = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/spx.csv')}
+    def _p66(s):
+        ks = sorted(s)
+        return 100 * (s[ks[-1]] / s[ks[-46]] - 1) if len(ks) > 46 else None
+    _a = _p66(_arc); _s = _p66(_spq)
+    if _a is not None and _s is not None: bdc_r66 = round(_a - _s, 1)
+    _ja = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/jaaa.csv')}
+    _jb = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/jbbb.csv')}
+    def _p22(s):
+        ks = sorted(s)
+        return 100 * (s[ks[-1]] / s[ks[-16]] - 1) if len(ks) > 16 else None
+    _x = _p22(_jb); _y = _p22(_ja)
+    if _x is not None and _y is not None: clo_r22 = round(_x - _y, 2)
+except Exception as e:
+    note(f'BDC 게이지 실패: {e}')
 try:
     _baa = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/baa_full.csv')}
     for r in load_csv(f'{D}/ext/baa.csv'): _baa[r['Date']] = float(r['Close'])
@@ -399,7 +416,9 @@ panels = {
          gauge('MOVE 5일 변화', move_c5, '급등=시스템 경계', 'na' if move_c5 is None else 'ok'),
          gauge('신용 스프레드 (BAA−AAA)', cred_spread, f'사이클 상태: {cred_state or "계산 불가"} — 낮은 수준에서 상승 전환하면 역사적으로 6개월 열위(명중 2000·01·18·22 / 실패 1998·2005 급속완화기). 관찰 등급', 'na' if cred_spread is None else ('warn' if (cred_state or '').startswith('초입') else 'ok')),
          gauge('하이일드 스프레드 22일 변화(pp)', hy22, '급확대=신용 재가격 진행(②③상한 경계) — 사모신용 사각 주의', st(hy22 is not None and hy22 >= 0.4, missing=hy22 is None)),
-         gauge('OFR 신용 서브지수 22일 변화', ocr22, '+0.3 이상이며 VIX 평온하면 2007형 괴리 관찰', st(ocr22 is not None and ocr22 >= 0.3, missing=ocr22 is None))]},
+         gauge('OFR 신용 서브지수 22일 변화', ocr22, '+0.3 이상이며 VIX 평온하면 2007형 괴리 관찰', st(ocr22 is not None and ocr22 >= 0.3, missing=ocr22 is None)),
+         gauge('BDC 상대강도 66일 (ARCC−SPX, %p)', bdc_r66, '사모신용의 공개 시가평가 — 감별 전용(타이밍 예측 기각): ≤−8이면 사모신용 스트레스 진행. 신용 사건 시 진원지 판독(2007·2015·2025 점등 / GE·헝다 비점등)', st(bdc_r66 is not None and bdc_r66 <= -8, missing=bdc_r66 is None)),
+         gauge('CLO 메자닌 상대 22일 (JBBB−JAAA, %p)', clo_r22, '레버리지론 하위등급 약세 = 사모신용 인접 스트레스 (감별 보조)', st(clo_r22 is not None and clo_r22 <= -1, missing=clo_r22 is None))]},
  'E': {'title': 'E 빅테크 실적·섹터 (51건)', 'grammar': '직접형 — 주도주 절대등락 단조(#021). E.SECTOR_BLOW: SMH가 출력의 ~2배(#085).',
    'g': [gauge('smh_gap (SMH−NDX)', sg, '큰 음수=반도체발. 동시 판독 전용(전조 아님)', st(sg is not None and abs(sg) >= 2, cond_hot=sg is not None and sg <= -3, missing=sg is None))]},
  'F': {'title': 'F 무역·재정·정책 (44건)', 'grammar': '관세: EPU는 시대상수(#015) — 판별은 GEX·성장·시스템(#013). FISCAL: 점화 단조 1.65→4.50%.',
