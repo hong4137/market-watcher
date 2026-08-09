@@ -408,6 +408,7 @@ try:
     changed = False
     for row_ in led:
         if row_.get('fwd22_actual'): continue
+        if row_.get('card') == 'P8_OBS20': continue
         ev_d = row_.get('date', '')
         i0 = nd_pos.get(ev_d)
         if i0 is not None and i0 + 22 < len(nd_sorted):
@@ -418,6 +419,58 @@ try:
         save_csv(led_p, led, list(led[0].keys()))
 except Exception as e:
     note(f'대장 채점 실패: {e}')
+
+# ==== P8 OBS-20 2단 순차 판정 (사전등록 2026-08-09 — 산식 동결) ====
+# m1 만기(+22거래일): CYC(Y2-EFFR)로 국면 분류 + 셀 판정 행 생성
+# m2 만기(+44거래일): 22~44일 수익 자동 채점 (긴축 랠리→열위 / 긴축 하락→반등 / 완화→우호)
+try:
+    led_p = f'{D}/forward_count_ledger.csv'
+    led = load_csv(led_p)
+    nd_sorted = sorted(ndx); nd_pos = {d0: i for i, d0 in enumerate(nd_sorted)}
+    tre = {r['Date']: float(r['Y2']) for r in load_csv(f'{D}/treasury.csv') if r.get('Y2')}
+    efr = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/effr.csv')}
+    def _asof2(s, d0, back=12):
+        yy0, mm0, dd0 = map(int, d0.split('-')); t0 = date(yy0, mm0, dd0)
+        for b in range(back):
+            k = (t0 - timedelta(days=b)).isoformat()
+            if k in s: return s[k]
+        return None
+    changed = False
+    for ev_d in sorted({r['date'] for r in led if r.get('card') != 'P8_OBS20'}):
+        i0 = nd_pos.get(ev_d)
+        if i0 is None: continue
+        if any(r.get('card') == 'P8_OBS20' and r.get('date') == ev_d for r in led): continue
+        if i0 + 22 < len(nd_sorted):
+            m1v = 100 * (ndx[nd_sorted[i0 + 22]] / ndx[nd_sorted[i0]] - 1)
+            y2v = _asof2(tre, ev_d); efv = _asof2(efr, ev_d)
+            if y2v is None or efv is None: continue
+            cycv = y2v - efv
+            if cycv > 0.25:
+                verdict = ('긴축∩랠리 → 2개월째 열위 예측' if m1v > 0 else '긴축∩하락소화 → 2개월째 반등 예측')
+            else:
+                verdict = '완화기 → 2개월째 우호 예측 (분류 불문)'
+            yy0, mm0, dd0 = map(int, ev_d.split('-'))
+            led.append({'date': ev_d, 'event_ret': '', 'domain': 'B칸 태깅분만 카운트(그 외 참고)',
+                        'card': 'P8_OBS20', 'reading': f'm1 {m1v:+.2f}% · CYC {cycv:+.2f}',
+                        'verdict': verdict,
+                        'fwd22_due': (date(yy0, mm0, dd0) + timedelta(days=64)).isoformat(),
+                        'fwd22_actual': '', 'pass': ''})
+            note(f'P8 OBS-20 분류: {ev_d} m1 {m1v:+.2f}% CYC {cycv:+.2f}')
+            changed = True
+    for r in led:
+        if r.get('card') != 'P8_OBS20' or r.get('fwd22_actual'): continue
+        i0 = nd_pos.get(r.get('date', ''))
+        if i0 is not None and i0 + 44 < len(nd_sorted):
+            m2v = round(100 * (ndx[nd_sorted[i0 + 44]] / ndx[nd_sorted[i0 + 22]] - 1), 2)
+            r['fwd22_actual'] = m2v
+            want_neg = ('열위' in r.get('verdict', ''))
+            r['pass'] = 'Y' if ((m2v < 0) == want_neg) else 'N'
+            note(f'P8 OBS-20 채점: {r.get("date")} m2 {m2v:+.2f}% {r["pass"]}')
+            changed = True
+    if changed:
+        save_csv(led_p, led, ['date', 'event_ret', 'domain', 'card', 'reading', 'verdict', 'fwd22_due', 'fwd22_actual', 'pass'])
+except Exception as e:
+    note(f'P8 처리 실패: {e}')
 
 msg = None
 if event:
