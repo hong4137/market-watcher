@@ -552,7 +552,9 @@ if not any(r['date'] == today for r in sc):
                'pc': pc.get(pc_last), 'dealer_net': dn, 'y2_chg1': y2c1, 'dxy_chg1': dxc1,
                'move': move_d and ys['move'][move_d], 'epu_pct': epu_pct,
                'gex_b': dix_last and round(dix_last[2] / 1e9, 1), 'drawdown60': drawdown,
-               'move_curve_pct': mc_pct})
+               'move_curve_pct': mc_pct,
+               'wood': prox_wood if 'prox_wood' in dir() else '', 'fire': prox_fire if 'prox_fire' in dir() else '',
+               'jpy5': jpy5, 'jcot_pct': jcot_pct})
     save_csv(sc_path, sc, list(sc[-1].keys()))
 
 # ==== 대장 자동 채점기 (매일 실행 — 만기 도래분 fwd22 자동 기입) ====
@@ -626,6 +628,67 @@ try:
         save_csv(led_p, led, ['date', 'event_ret', 'domain', 'card', 'reading', 'verdict', 'fwd22_due', 'fwd22_actual', 'pass'])
 except Exception as e:
     note(f'P8 처리 실패: {e}')
+
+# ==== P9 자동 적립·채점 (사전등록 2026-08-12 — 산식 동결) ====
+# P9a: 굳은 장작(60일 중 40일+ 장작≥3) 위의 불씨≥3 → 적립, 66일 내 최대낙폭 ≥15% 채점
+# P9c: JPY5 ≤ −3% AND VIX ≥ 25 → 적립, fwd66 양수 채점
+try:
+    led_p = f'{D}/forward_count_ledger.csv'
+    led = load_csv(led_p)
+    nd_sorted = sorted(ndx); nd_pos = {d0: i for i, d0 in enumerate(nd_sorted)}
+    changed = False
+    def _recent(card, days_):
+        yy0, mm0, dd0 = map(int, today.split('-'))
+        cut = (date(yy0, mm0, dd0) - timedelta(days=days_)).isoformat()
+        return any(r.get('card') == card and r.get('date', '') >= cut for r in led)
+    # P9a 적립
+    try:
+        sc_rows = load_csv(f'{D}/daily_scorecard.csv')
+        hist = [r for r in sc_rows if r.get('wood') not in (None, '', 'None')][-60:]
+        if len(hist) >= 60:
+            wd_days = sum(1 for r in hist if float(r['wood']) >= 3)
+            cur_fire = float(hist[-1]['fire']) if hist[-1].get('fire') not in ('', None) else 0
+            if wd_days >= 40 and cur_fire >= 3 and not _recent('P9a_G', 56):
+                yy0, mm0, dd0 = map(int, today.split('-'))
+                led.append({'date': today, 'event_ret': '', 'domain': 'D칸 상시(P9a)', 'card': 'P9a_G',
+                            'reading': f'장작지속 {wd_days}/60 · 불씨 {cur_fire:.0f}/6',
+                            'verdict': '66일 내 최대낙폭 ≥15% 예측 (합격선: 첫 5건 중 2+)',
+                            'fwd22_due': (date(yy0, mm0, dd0) + timedelta(days=96)).isoformat(),
+                            'fwd22_actual': '', 'pass': ''})
+                note(f'P9a 적립: 장작 {wd_days}/60 불씨 {cur_fire:.0f}')
+                changed = True
+    except Exception as e:
+        note(f'P9a 적립 실패: {e}')
+    # P9c 적립
+    if jpy5 is not None and v is not None and jpy5 <= -3 and v >= 25 and not _recent('P9c_CARRY', 56):
+        yy0, mm0, dd0 = map(int, today.split('-'))
+        led.append({'date': today, 'event_ret': '', 'domain': 'D칸 상시(P9c)', 'card': 'P9c_CARRY',
+                    'reading': f'JPY5 {jpy5:+.2f}% · VIX {v:.1f}',
+                    'verdict': 'fwd66 양수 예측 — 캐리 항복 매수 (합격선: 첫 8건 중 6+)',
+                    'fwd22_due': (date(yy0, mm0, dd0) + timedelta(days=96)).isoformat(),
+                    'fwd22_actual': '', 'pass': ''})
+        note(f'P9c 적립: JPY5 {jpy5:+.2f} VIX {v:.1f}')
+        changed = True
+    # 채점 (66거래일 만기)
+    for r in led:
+        if r.get('card') not in ('P9a_G', 'P9c_CARRY') or r.get('fwd22_actual'): continue
+        i0 = nd_pos.get(r.get('date', ''))
+        if i0 is None or i0 + 66 >= len(nd_sorted): continue
+        if r['card'] == 'P9c_CARRY':
+            f66v = round(100 * (ndx[nd_sorted[i0 + 66]] / ndx[nd_sorted[i0]] - 1), 2)
+            r['fwd22_actual'] = f66v; r['pass'] = 'Y' if f66v > 0 else 'N'
+        else:
+            wvals = [ndx[nd_sorted[j]] for j in range(i0, i0 + 67)]
+            peak = wvals[0]; mdd_v = 0.0
+            for x in wvals:
+                peak = max(peak, x); mdd_v = min(mdd_v, 100 * (x / peak - 1))
+            r['fwd22_actual'] = round(mdd_v, 2); r['pass'] = 'Y' if mdd_v <= -15 else 'N'
+        note(f"{r['card']} 채점: {r['date']} → {r['fwd22_actual']} {r['pass']}")
+        changed = True
+    if changed:
+        save_csv(led_p, led, ['date', 'event_ret', 'domain', 'card', 'reading', 'verdict', 'fwd22_due', 'fwd22_actual', 'pass'])
+except Exception as e:
+    note(f'P9 처리 실패: {e}')
 
 msg = None
 if event:
