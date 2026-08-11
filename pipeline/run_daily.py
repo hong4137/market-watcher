@@ -460,7 +460,7 @@ try:
     if len(_dk) > 14: _checks.append(('예금', 100 * (_dp[_dk[-1]] / _dp[_dk[-14]] - 1) <= 1.36))
     _mvv = move_d and ys['move'][move_d]
     if _mvv: _checks.append(('MOVE', _mvv >= 79.16))
-    prox_hits = sum(1 for _, b in _checks); prox_tot = len(_checks)
+    prox_hits = sum(1 for _, b in _checks if b); prox_tot = len(_checks)
     prox_list = '·'.join(n for n, b in _checks if b)
 except Exception as e:
     note(f'근접도 실패: {e}')
