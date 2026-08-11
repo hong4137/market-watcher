@@ -61,7 +61,7 @@ for sym, name in [('VXN', 'vxn'), ('VVIX', 'vvix'), ('SKEW', 'skew'),
 # 야후 계열 (10년)
 for sym, name in [('GC=F', 'gold'), ('BTC-USD', 'btc'), ('QQQE', 'qqqe'), ('QQQ', 'qqq'), ('^MOVE', 'move_full'),
                   ('HG=F', 'copper'), ('IWM', 'iwm'), ('IYT', 'iyt'), ('XLY', 'xly'), ('XLP', 'xlp'), ('XLF', 'xlf'),
-                  ('ARCC', 'arcc'), ('BIZD', 'bizd'), ('JAAA', 'jaaa'), ('JBBB', 'jbbb'), ('^GSPC', 'spx'), ('PFF', 'pff'), ('LQD', 'lqd')]:
+                  ('ARCC', 'arcc'), ('BIZD', 'bizd'), ('JAAA', 'jaaa'), ('JBBB', 'jbbb'), ('^GSPC', 'spx'), ('PFF', 'pff'), ('LQD', 'lqd'), ('JPY=X', 'usdjpy')]:
     try:
         j = json.loads(get(f'https://query1.finance.yahoo.com/v8/finance/chart/{urllib.request.quote(sym)}?period1=915148800&period2=9999999999&interval=1d'))
         res = j['chart']['result'][0]
@@ -70,6 +70,19 @@ for sym, name in [('GC=F', 'gold'), ('BTC-USD', 'btc'), ('QQQE', 'qqqe'), ('QQQ'
         save(name, rows, ['Date', 'Close'])
     except Exception as e:
         print(f'{name} 실패: {e}')
+
+
+# CFTC 엔 COT (주간)
+try:
+    j = json.loads(get("https://publicreporting.cftc.gov/resource/6dca-aqww.json?cftc_contract_market_code=097741&$limit=4000&$select=report_date_as_yyyy_mm_dd,noncomm_positions_long_all,noncomm_positions_short_all&$order=report_date_as_yyyy_mm_dd"))
+    rows = []
+    for r in j:
+        try:
+            rows.append([r['report_date_as_yyyy_mm_dd'][:10], float(r['noncomm_positions_long_all']) - float(r['noncomm_positions_short_all'])])
+        except Exception: pass
+    save('jpy_cot', rows, ['Date', 'Close'])
+except Exception as e:
+    print(f'jpy_cot 실패: {e}')
 
 # OFR 신용 서브지수 (일일)
 try:

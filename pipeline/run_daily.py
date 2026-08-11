@@ -329,7 +329,18 @@ except Exception as e:
     note(f"MOVE×커브 게이지 실패: {e}")
 
 # ---- D칸 신용 조기경보 게이지 (32c, 관찰 등급 — 사전등록 전 판정 자산 아님) ----
-cred_spread = None; cred_state = None; hy22 = None; ocr22 = None; bdc_r66 = None; clo_r22 = None; nfci_lev_v = None; lev_state = None; pff_r22 = None
+cred_spread = None; cred_state = None; hy22 = None; ocr22 = None; bdc_r66 = None; clo_r22 = None; nfci_lev_v = None; lev_state = None; pff_r22 = None; jpy5 = None; jcot_pct = None
+try:
+    _jp = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/usdjpy.csv')}
+    _jk = sorted(_jp)
+    if len(_jk) > 6: jpy5 = round(100 * (_jp[_jk[-1]] / _jp[_jk[-5]] - 1), 2)
+    _jc = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/jpy_cot.csv')}
+    _ck = sorted(_jc)
+    if len(_ck) > 60:
+        _hist = [_jc[k] for k in _ck[-52:]]
+        jcot_pct = round(100 * sum(1 for x in _hist if x <= _jc[_ck[-1]]) / len(_hist))
+except Exception as e:
+    note(f'캐리 게이지 실패: {e}')
 try:
     _pf = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/pff.csv')}
     _lq = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/lqd.csv')}
@@ -438,6 +449,8 @@ panels = {
          gauge('OFR 신용 서브지수 22일 변화', ocr22, '+0.3 이상이며 VIX 평온하면 2007형 괴리 관찰', st(ocr22 is not None and ocr22 >= 0.3, missing=ocr22 is None)),
          gauge('BDC 상대강도 66일 (ARCC−SPX, %p)', bdc_r66, '사모신용의 공개 시가평가 — 감별 전용(타이밍 예측 기각): ≤−8이면 사모신용 스트레스 진행. 신용 사건 시 진원지 판독(2007·2015·2025 점등 / GE·헝다 비점등)', st(bdc_r66 is not None and bdc_r66 <= -8, missing=bdc_r66 is None)),
          gauge('CLO 메자닌 상대 22일 (JBBB−JAAA, %p)', clo_r22, '레버리지론 하위등급 약세 = 사모신용 인접 스트레스 (감별 보조)', st(clo_r22 is not None and clo_r22 <= -1, missing=clo_r22 is None)),
+         gauge('엔 캐리 게이지 (USDJPY 5일 %)', jpy5, '큰 음수=엔 급등=캐리 청산 진행(동시·감별 전용, 상시 예측 실격). 청산형은 항복(고VIX) 도달 시 역대급 회복(1998 +30%·2024 +5.8%)', st(jpy5 is not None and jpy5 <= -3, missing=jpy5 is None)),
+         gauge('엔 투기 포지션 52주 백분위', jcot_pct, '≤10 순숏 극단=캐리 취약 배경(타이밍 아닌 규모 증폭 조건 — 2024-07 백분위 1% 한 달 뒤 대청산)', st(jcot_pct is not None and jcot_pct <= 10, missing=jcot_pct is None)),
          gauge('은행 우선주 상대 22일 (PFF−LQD, %p)', pff_r22, '은행판 강도 감별(사건 시 전용, 상시 무정보): ≤−10 시스템급(2008형) / −5~0 국지 / 양수 무해(NYCB형)', st(pff_r22 is not None and pff_r22 <= -5, missing=pff_r22 is None)),
          gauge('NFCI 레버리지 서브지수', nfci_lev_v, f'방향성 관찰 전용(32f 블록 플라시보 유의 미달 11%): {lev_state or "?"} — 역사적으로 이 배경의 3개월이 기준선보다 약했음(우연 범위와 겹침). 국면 게이지와 독립축인 점만 확정', st(nfci_lev_v is not None and (lev_state or '').startswith('느슨'), missing=nfci_lev_v is None))]},
  'E': {'title': 'E 빅테크 실적·섹터 (51건)', 'grammar': '직접형 — 주도주 절대등락 단조(#021). E.SECTOR_BLOW: SMH가 출력의 ~2배(#085).',
