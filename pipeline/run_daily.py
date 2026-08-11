@@ -427,6 +427,44 @@ try:
 except Exception as e:
     note(f'B분할 게이지 실패: {e}')
 
+# ---- D칸 위험 근접도 (32m — 직전 원형 문턱 동결, 관찰 등급) ----
+prox_hits = None; prox_tot = None; prox_list = ''
+try:
+    _ld = lambda nm: {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/{nm}.csv')}
+    def _last(s): ks = sorted(s); return s[ks[-1]] if ks else None
+    def _chN(s, n):
+        ks = sorted(s)
+        return (s[ks[-1]] - s[ks[-n]]) if len(ks) > n else None
+    _checks = []
+    _lv2 = _ld('nfci_lev'); _cr3 = _ld('nfci_credit')
+    _v = _last(_lv2); _c = _last(_cr3)
+    if _v is not None: _checks.append(('레버', _v >= -0.08))
+    if _v is not None and _c is not None: _checks.append(('G', (_c - _v) <= 0.05))
+    _b2 = _ld('baa_full'); _a2 = _ld('aaa_full')
+    try:
+        for r in load_csv(f'{D}/ext/baa.csv'): _b2[r['Date']] = float(r['Close'])
+        for r in load_csv(f'{D}/ext/aaa.csv'): _a2[r['Date']] = float(r['Close'])
+    except Exception: pass
+    _spd = {d0: _b2[d0] - _a2[d0] for d0 in _b2 if d0 in _a2}
+    _s66 = _chN(_spd, 45)
+    if _s66 is not None: _checks.append(('스프66Δ', _s66 >= -0.03))
+    _o22 = _chN(_ld('ofr_credit'), 16)
+    if _o22 is not None: _checks.append(('OFR22Δ', _o22 >= 0.01))
+    if bdc_r66 is not None: _checks.append(('BDC', bdc_r66 <= -2.96))
+    if pff_r22 is not None: _checks.append(('PFF', pff_r22 <= -0.14))
+    if jcot_pct is not None: _checks.append(('엔COT', jcot_pct <= 41.35))
+    _cp2 = _ld('cp3m'); _tb2 = _ld('tb3m')
+    _x = _last(_cp2); _y = _last(_tb2)
+    if _x is not None and _y is not None: _checks.append(('CP', (_x - _y) >= 0.14))
+    _dp = _ld('deposits'); _dk = sorted(_dp)
+    if len(_dk) > 14: _checks.append(('예금', 100 * (_dp[_dk[-1]] / _dp[_dk[-14]] - 1) <= 1.36))
+    _mvv = move_d and ys['move'][move_d]
+    if _mvv: _checks.append(('MOVE', _mvv >= 79.16))
+    prox_hits = sum(1 for _, b in _checks); prox_tot = len(_checks)
+    prox_list = '·'.join(n for n, b in _checks if b)
+except Exception as e:
+    note(f'근접도 실패: {e}')
+
 panels = {
  'A': {'title': 'A 통화정책 (86건)', 'grammar': '서프라이즈 용량 반응 — 2Y 당일 변화가 출력과 단조(#019). 큰 |2Y당일|이 곧 사건 용량.',
    'g': [gauge('2Y 당일 변화(pp)', y2c1, '±0.10 이상이면 서프라이즈 급', st(y2c1 is not None and abs(y2c1) >= 0.10, missing=y2c1 is None)),
@@ -449,6 +487,7 @@ panels = {
          gauge('OFR 신용 서브지수 22일 변화', ocr22, '+0.3 이상이며 VIX 평온하면 2007형 괴리 관찰', st(ocr22 is not None and ocr22 >= 0.3, missing=ocr22 is None)),
          gauge('BDC 상대강도 66일 (ARCC−SPX, %p)', bdc_r66, '사모신용의 공개 시가평가 — 감별 전용(타이밍 예측 기각): ≤−8이면 사모신용 스트레스 진행. 신용 사건 시 진원지 판독(2007·2015·2025 점등 / GE·헝다 비점등)', st(bdc_r66 is not None and bdc_r66 <= -8, missing=bdc_r66 is None)),
          gauge('CLO 메자닌 상대 22일 (JBBB−JAAA, %p)', clo_r22, '레버리지론 하위등급 약세 = 사모신용 인접 스트레스 (감별 보조)', st(clo_r22 is not None and clo_r22 <= -1, missing=clo_r22 is None)),
+         gauge('위험 근접도 (직전 원형 일치 수)', prox_hits is not None and f'{prox_hits}/{prox_tot}', f'신용·포지션형 위기 직전 배경과의 유사도(LOEO 6/6 포착·오경보 36% — 필요조건 온도계, 타이밍 아님. SVB·코로나형은 못 잡음). 점등: {prox_list or "없음"}', st(prox_hits is not None and prox_tot and prox_hits >= 0.6 * prox_tot, missing=prox_hits is None)),
          gauge('엔 캐리 게이지 (USDJPY 5일 %)', jpy5, '큰 음수=엔 급등=캐리 청산 진행(동시·감별 전용, 상시 예측 실격). 항복 동반(VIX≥25) 시 3개월 +16.2%/83% — 역사적 매수 구간. 저VIX의 조용한 엔 급등은 고점 경고 단서(2000·2002·2023-07)', st(jpy5 is not None and jpy5 <= -3, missing=jpy5 is None)),
          gauge('엔 투기 포지션 52주 백분위', jcot_pct, '≤10 순숏 극단=캐리 취약 배경(타이밍 아닌 규모 증폭 조건 — 2024-07 백분위 1% 한 달 뒤 대청산)', st(jcot_pct is not None and jcot_pct <= 10, missing=jcot_pct is None)),
          gauge('은행 우선주 상대 22일 (PFF−LQD, %p)', pff_r22, '은행판 강도 감별(사건 시 전용, 상시 무정보): ≤−10 시스템급(2008형) / −5~0 국지 / 양수 무해(NYCB형)', st(pff_r22 is not None and pff_r22 <= -5, missing=pff_r22 is None)),
