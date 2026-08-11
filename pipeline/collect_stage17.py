@@ -46,6 +46,7 @@ YAHOO_SYMS = [
     ('USO', 'uso'), ('DBA', 'dba'), ('UUP', 'uup'), ('EEM', 'eem'),
     ('FXI', 'fxi'), ('GDX', 'gdx'), ('VNQ', 'vnq'), ('RSP', 'rsp'),
     ('NG=F', 'natgas'), ('^GSPC', 'spx'),
+    ('JPY=X', 'usdjpy'), ('CNY=X', 'usdcny'), ('CHF=X', 'usdchf'), ('FXY', 'fxy'), ('CEW', 'cew'),
     ('ARCC', 'arcc'), ('BIZD', 'bizd'), ('FSK', 'fsk'), ('MAIN', 'main_bdc'), ('PSEC', 'psec'),
     ('APO', 'apo'), ('ARES', 'ares'), ('OWL', 'owl'), ('BX', 'bx'), ('KKR', 'kkr'),
     ('JAAA', 'jaaa'), ('JBBB', 'jbbb'), ('BKLN', 'bkln'), ('SRLN', 'srln'),
@@ -80,5 +81,19 @@ try:
     save('ofr_credit', rows)
 except Exception as e:
     print(f'ofr_credit 실패: {e}')
+
+
+# CFTC 엔 선물 비상업 포지션 (레거시, 전 역사)
+try:
+    j = json.loads(get("https://publicreporting.cftc.gov/resource/6dca-aqww.json?cftc_contract_market_code=097741&$limit=4000&$select=report_date_as_yyyy_mm_dd,noncomm_positions_long_all,noncomm_positions_short_all&$order=report_date_as_yyyy_mm_dd"))
+    rows = []
+    for r in j:
+        try:
+            net = float(r['noncomm_positions_long_all']) - float(r['noncomm_positions_short_all'])
+            rows.append([r['report_date_as_yyyy_mm_dd'][:10], net])
+        except Exception: pass
+    save('jpy_cot', rows)
+except Exception as e:
+    print(f'jpy_cot 실패: {e}')
 
 print('17단계 수집 완료')
