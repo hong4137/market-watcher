@@ -61,7 +61,7 @@ for sym, name in [('VXN', 'vxn'), ('VVIX', 'vvix'), ('SKEW', 'skew'),
 # 야후 계열 (10년)
 for sym, name in [('GC=F', 'gold'), ('BTC-USD', 'btc'), ('QQQE', 'qqqe'), ('QQQ', 'qqq'), ('^MOVE', 'move_full'),
                   ('HG=F', 'copper'), ('IWM', 'iwm'), ('IYT', 'iyt'), ('XLY', 'xly'), ('XLP', 'xlp'), ('XLF', 'xlf'),
-                  ('ARCC', 'arcc'), ('BIZD', 'bizd'), ('JAAA', 'jaaa'), ('JBBB', 'jbbb'), ('^GSPC', 'spx')]:
+                  ('ARCC', 'arcc'), ('BIZD', 'bizd'), ('JAAA', 'jaaa'), ('JBBB', 'jbbb'), ('^GSPC', 'spx'), ('PFF', 'pff'), ('LQD', 'lqd')]:
     try:
         j = json.loads(get(f'https://query1.finance.yahoo.com/v8/finance/chart/{urllib.request.quote(sym)}?period1=915148800&period2=9999999999&interval=1d'))
         res = j['chart']['result'][0]
