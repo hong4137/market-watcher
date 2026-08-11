@@ -449,7 +449,7 @@ panels = {
          gauge('OFR 신용 서브지수 22일 변화', ocr22, '+0.3 이상이며 VIX 평온하면 2007형 괴리 관찰', st(ocr22 is not None and ocr22 >= 0.3, missing=ocr22 is None)),
          gauge('BDC 상대강도 66일 (ARCC−SPX, %p)', bdc_r66, '사모신용의 공개 시가평가 — 감별 전용(타이밍 예측 기각): ≤−8이면 사모신용 스트레스 진행. 신용 사건 시 진원지 판독(2007·2015·2025 점등 / GE·헝다 비점등)', st(bdc_r66 is not None and bdc_r66 <= -8, missing=bdc_r66 is None)),
          gauge('CLO 메자닌 상대 22일 (JBBB−JAAA, %p)', clo_r22, '레버리지론 하위등급 약세 = 사모신용 인접 스트레스 (감별 보조)', st(clo_r22 is not None and clo_r22 <= -1, missing=clo_r22 is None)),
-         gauge('엔 캐리 게이지 (USDJPY 5일 %)', jpy5, '큰 음수=엔 급등=캐리 청산 진행(동시·감별 전용, 상시 예측 실격). 청산형은 항복(고VIX) 도달 시 역대급 회복(1998 +30%·2024 +5.8%)', st(jpy5 is not None and jpy5 <= -3, missing=jpy5 is None)),
+         gauge('엔 캐리 게이지 (USDJPY 5일 %)', jpy5, '큰 음수=엔 급등=캐리 청산 진행(동시·감별 전용, 상시 예측 실격). 항복 동반(VIX≥25) 시 3개월 +16.2%/83% — 역사적 매수 구간. 저VIX의 조용한 엔 급등은 고점 경고 단서(2000·2002·2023-07)', st(jpy5 is not None and jpy5 <= -3, missing=jpy5 is None)),
          gauge('엔 투기 포지션 52주 백분위', jcot_pct, '≤10 순숏 극단=캐리 취약 배경(타이밍 아닌 규모 증폭 조건 — 2024-07 백분위 1% 한 달 뒤 대청산)', st(jcot_pct is not None and jcot_pct <= 10, missing=jcot_pct is None)),
          gauge('은행 우선주 상대 22일 (PFF−LQD, %p)', pff_r22, '은행판 강도 감별(사건 시 전용, 상시 무정보): ≤−10 시스템급(2008형) / −5~0 국지 / 양수 무해(NYCB형)', st(pff_r22 is not None and pff_r22 <= -5, missing=pff_r22 is None)),
          gauge('NFCI 레버리지 서브지수', nfci_lev_v, f'방향성 관찰 전용(32f 블록 플라시보 유의 미달 11%): {lev_state or "?"} — 역사적으로 이 배경의 3개월이 기준선보다 약했음(우연 범위와 겹침). 국면 게이지와 독립축인 점만 확정', st(nfci_lev_v is not None and (lev_state or '').startswith('느슨'), missing=nfci_lev_v is None))]},
