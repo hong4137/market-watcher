@@ -329,6 +329,14 @@ except Exception as e:
     note(f"MOVE×커브 게이지 실패: {e}")
 
 # ---- D칸 신용 조기경보 게이지 (32c, 관찰 등급 — 사전등록 전 판정 자산 아님) ----
+bei_curve_v = None
+try:
+    _b5 = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/bei5y.csv')}
+    _b10 = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/bei10y.csv')}
+    _k5 = sorted(_b5); _k10 = sorted(_b10)
+    if _k5 and _k10: bei_curve_v = round(_b10[_k10[-1]] - _b5[_k5[-1]], 2)
+except Exception as e:
+    note(f'BEI커브 게이지 실패: {e}')
 cred_spread = None; cred_state = None; hy22 = None; ocr22 = None; bdc_r66 = None; clo_r22 = None; nfci_lev_v = None; lev_state = None; pff_r22 = None; jpy5 = None; jcot_pct = None
 try:
     _jp = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/usdjpy.csv')}
@@ -497,8 +505,9 @@ panels = {
          gauge('엔 투기 포지션 52주 백분위', jcot_pct, '≤10 순숏 극단=캐리 취약 배경(타이밍 아닌 규모 증폭 조건 — 2024-07 백분위 1% 한 달 뒤 대청산)', st(jcot_pct is not None and jcot_pct <= 10, missing=jcot_pct is None)),
          gauge('은행 우선주 상대 22일 (PFF−LQD, %p)', pff_r22, '은행판 강도 감별(사건 시 전용, 상시 무정보): ≤−10 시스템급(2008형) / −5~0 국지 / 양수 무해(NYCB형)', st(pff_r22 is not None and pff_r22 <= -5, missing=pff_r22 is None)),
          gauge('NFCI 레버리지 서브지수', nfci_lev_v, f'방향성 관찰 전용(32f 블록 플라시보 유의 미달 11%): {lev_state or "?"} — 역사적으로 이 배경의 3개월이 기준선보다 약했음(우연 범위와 겹침). 국면 게이지와 독립축인 점만 확정', st(nfci_lev_v is not None and (lev_state or '').startswith('느슨'), missing=nfci_lev_v is None))]},
- 'E': {'title': 'E 빅테크 실적·섹터 (51건)', 'grammar': '직접형 — 주도주 절대등락 단조(#021). E.SECTOR_BLOW: SMH가 출력의 ~2배(#085).',
-   'g': [gauge('smh_gap (SMH−NDX)', sg, '큰 음수=반도체발. 동시 판독 전용(전조 아님)', st(sg is not None and abs(sg) >= 2, cond_hot=sg is not None and sg <= -3, missing=sg is None))]},
+ 'E': {'title': 'E 빅테크 실적·섹터 (51건)', 'grammar': '카드14(33단계): 실적 사건의 1개월은 실적이 아니라 인플레 제약 환경이 결정. 긴축기엔 실적 랠리도 fake(38%). 시즌 첫 사건만 정보. 긴축기 1개월 랠리는 2개월째 역전(14%).',
+   'g': [gauge('smh_gap (SMH−NDX)', sg, '큰 음수=반도체발. 동시 판독 전용(전조 아님)', st(sg is not None and abs(sg) >= 2, cond_hot=sg is not None and sg <= -3, missing=sg is None)),
+         gauge('BEI 커브 (10Y−5Y 기대인플레, pp)', bei_curve_v, '역전(≤0)=인플레 제약 극심 — 실적 사건 시 1개월 열위 15%(카드14 1단, P10 카운트). 정상권(+0.1↑)은 무정보 — 판정 금지', st(bei_curve_v is not None and bei_curve_v <= 0, missing=bei_curve_v is None))]},
  'F': {'title': 'F 무역·재정·정책 (44건)', 'grammar': '관세: EPU는 시대상수(#015) — 판별은 GEX·성장·시스템(#013). FISCAL: 점화 단조 1.65→4.50%.',
    'g': [gauge('EPU 역사 백분위', epu_pct, 'C칸과 공유 — 수준보다 급변에 주목', 'na' if epu_pct is None else 'ok'),
          gauge('GEX($B)', dix_last and round(dix_last[2] / 1e9, 1), '음수=딜러 숏감마(증폭 국면)', st(dix_last is not None and dix_last[2] < 0, missing=dix_last is None))]},
