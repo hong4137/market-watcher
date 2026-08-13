@@ -96,4 +96,20 @@ try:
 except Exception as e:
     print(f'jpy_cot 실패: {e}')
 
+
+# NDX OHLC (캔들 꼬리 분석용)
+try:
+    j = json.loads(get('https://query1.finance.yahoo.com/v8/finance/chart/%5ENDX?period1=915148800&period2=9999999999&interval=1d'))
+    res = j['chart']['result'][0]
+    q = res['indicators']['quote'][0]
+    rows = []
+    for t_, o, h, l, c in zip(res['timestamp'], q['open'], q['high'], q['low'], q['close']):
+        if c and o and h and l:
+            rows.append([datetime.utcfromtimestamp(t_).strftime('%Y-%m-%d'), round(o,2), round(h,2), round(l,2), round(c,2)])
+    with open('docs/data/ext/ndx_ohlc.csv', 'w', newline='', encoding='utf-8-sig') as f:
+        w = csv.writer(f); w.writerow(['Date','Open','High','Low','Close']); w.writerows(rows)
+    print(f'ndx_ohlc: {len(rows)}행')
+except Exception as e:
+    print(f'ndx_ohlc 실패: {e}')
+
 print('17단계 수집 완료')
