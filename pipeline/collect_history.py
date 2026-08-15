@@ -35,7 +35,7 @@ for sid, name in [('BAMLH0A0HYM2', 'hy_oas'), ('BAMLC0A0CM', 'ig_oas'),
                   ('DBAA', 'baa'), ('DAAA', 'aaa'),
                   ('NFCICREDIT', 'nfci_credit'), ('NFCILEVERAGE', 'nfci_lev'),
                   ('DCPF3M', 'cp3m'), ('DTB3', 'tb3m'), ('DPSACBW027SBOG', 'deposits'),
-                  ('T5YIE', 'bei5y'), ('T10YIE', 'bei10y')]:
+                  ('T5YIE', 'bei5y'), ('T10YIE', 'bei10y'), ('WTREGEN', 'tga'), ('DTB4WK', 'bill4w')]:
     try:
         j = json.loads(get(f'https://api.stlouisfed.org/fred/series/observations?series_id={sid}&api_key={FRED}&file_type=json&observation_start=2019-06-01'))
         rows = [[o['date'], float(o['value'])] for o in j['observations'] if o['value'] != '.']

@@ -329,6 +329,19 @@ except Exception as e:
     note(f"MOVE×커브 게이지 실패: {e}")
 
 # ---- D칸 신용 조기경보 게이지 (32c, 관찰 등급 — 사전등록 전 판정 자산 아님) ----
+kink_v = None; standoff = None
+try:
+    _b4 = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/bill4w.csv')}
+    _t3 = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/tb3m.csv')}
+    _k4 = sorted(_b4); _k3 = sorted(_t3)
+    if _k4 and _k3: kink_v = round(_b4[_k4[-1]] - _t3[_k3[-1]], 2)
+    _tg = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/tga.csv')}
+    _kt = sorted(_tg)
+    if len(_kt) > 14:
+        _tg13 = 100 * (_tg[_kt[-1]] / _tg[_kt[-14]] - 1)
+        standoff = 'ON(한도형 — TGA 급감)' if _tg13 <= -40 else 'OFF'
+except Exception as e:
+    note(f'킹크 게이지 실패: {e}')
 bei_curve_v = None
 try:
     _b5 = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/bei5y.csv')}
@@ -508,10 +521,12 @@ panels = {
  'E': {'title': 'E 빅테크 실적·섹터 (51건)', 'grammar': '카드14(33단계): 실적 사건의 1개월은 실적이 아니라 인플레 제약 환경이 결정. 긴축기엔 실적 랠리도 fake(38%). 시즌 첫 사건만 정보. 긴축기 1개월 랠리는 2개월째 역전(14%).',
    'g': [gauge('smh_gap (SMH−NDX)', sg, '큰 음수=반도체발. 동시 판독 전용(전조 아님)', st(sg is not None and abs(sg) >= 2, cond_hot=sg is not None and sg <= -3, missing=sg is None)),
          gauge('BEI 커브 (10Y−5Y 기대인플레, pp)', bei_curve_v, '역전(≤0)=인플레 제약 극심 — 실적 사건 시 1개월 열위 15%(카드14 1단, P10 카운트). 정상권(+0.1↑)은 무정보 — 판정 금지', st(bei_curve_v is not None and bei_curve_v <= 0, missing=bei_curve_v is None))]},
- 'F': {'title': 'F 무역·재정·정책 (44건)', 'grammar': '관세: EPU는 시대상수(#015) — 판별은 GEX·성장·시스템(#013). FISCAL: 점화 단조 1.65→4.50%.',
-   'g': [gauge('EPU 역사 백분위', epu_pct, 'C칸과 공유 — 수준보다 급변에 주목', 'na' if epu_pct is None else 'ok'),
-         gauge('GEX($B)', dix_last and round(dix_last[2] / 1e9, 1), '음수=딜러 숏감마(증폭 국면)', st(dix_last is not None and dix_last[2] < 0, missing=dix_last is None))]},
- 'G': {'title': 'G 기술적·수급 (21건)', 'grammar': '판정식은 사후 분류 전용(#070). 모멘텀=SVR≤20+P/C≤0.55 / S1 스퀴즈=SVR≥80+NSP≥80.',
+ 'F': {'title': 'F 무역·재정·정책 (44건)', 'grammar': '자책골 3형(카드15~17): 관세=반응함수(RF 실적)가 생사 / 재정=데드라인 대치 매수+킹크 / 규제·수출통제=무출구 만성화 소화. 상세는 사건 시 카드.',
+   'g': [gauge('구리/금 22일 (카드8·15 병용, %)', cu22v, '큰 음수=정책 충격 재가격 완료(관세 타격 시 매수 축 — 반응함수 무관 생존)', 'na' if cu22v is None else 'ok'),
+         gauge('재정 대치 스위치 (TGA 13주)', standoff, '한도형 대치의 기계 신호. ON이면 아래 킹크를 매일 판독(P12)', st(standoff is not None and str(standoff).startswith('ON'), missing=standoff is None)),
+         gauge('국채 킹크 (4주−3개월, pp)', kink_v, '대치 스위치 ON에서 ≥+0.20 점등 = 디폴트 공포 가격 절정 = 이후 1개월 우호(+8.1%/95%, P12 카운트). 스위치 OFF면 무시', st(kink_v is not None and standoff is not None and str(standoff).startswith('ON') and kink_v >= 0.2, missing=kink_v is None)),
+         gauge('EPU 역사 백분위', epu_pct, 'C칸과 공유 — 수준보다 급변에 주목', 'na' if epu_pct is None else 'ok')]},
+ 'G': {'title': 'G 기술적·수급 (21건)', 'grammar': '카드18: 뉴스 없는 급등은 fake 우세(−19pp, 방향성 관찰) — 추격 금지. 무촉매 급등은 신고가권 전용 현상. 진원 감별: P/C 과열=모멘텀 / NSP 과밀=스퀴즈 / 숏감마=감마.',
    'g': [gauge('SVR 20일 상대', sr, '≤20 저공매도 / ≥80 숏 과밀(#049)', st(sr is not None and (sr <= 20 or sr >= 80), missing=sr is None)),
          gauge('Equity P/C', pc.get(pc_last), '≤0.55 과열 낙관(#066)', st(pc_last is not None and pc[pc_last] <= 0.55, missing=pc_last is None)),
          gauge('NSP 52주 백분위', np_, '≥80 과밀 — 딜러 순숏 국면에선 휴면(#082)', 'na' if np_ is None else ('warn' if (np_ >= 80 and dn is not None and dn > 0) else 'ok')),
@@ -668,6 +683,16 @@ try:
                 changed = True
     except Exception as e:
         note(f'P9a 적립 실패: {e}')
+    # P12 적립 (재정 킹크 — 대치 스위치 ON & 킹크 점등)
+    if kink_v is not None and standoff is not None and str(standoff).startswith('ON') and kink_v >= 0.2 and not _recent('P12_KINK', 56):
+        yy0, mm0, dd0 = map(int, today.split('-'))
+        led.append({'date': today, 'event_ret': '', 'domain': 'F칸 상시(P12)', 'card': 'P12_KINK',
+                    'reading': f'킹크 {kink_v:+.2f}pp · 대치 {standoff}',
+                    'verdict': 'fwd22 양수 예측 — 공포 가격 절정 (합격선: 첫 4에피소드 중 3+)',
+                    'fwd22_due': (date(yy0, mm0, dd0) + timedelta(days=32)).isoformat(),
+                    'fwd22_actual': '', 'pass': ''})
+        note(f'P12 적립: 킹크 {kink_v:+.2f}')
+        changed = True
     # P9c 적립
     if jpy5 is not None and v is not None and jpy5 <= -3 and v >= 25 and not _recent('P9c_CARRY', 56):
         yy0, mm0, dd0 = map(int, today.split('-'))
@@ -680,11 +705,13 @@ try:
         changed = True
     # 채점 (66거래일 만기)
     for r in led:
-        if r.get('card') not in ('P9a_G', 'P9c_CARRY') or r.get('fwd22_actual'): continue
+        if r.get('card') not in ('P9a_G', 'P9c_CARRY', 'P12_KINK') or r.get('fwd22_actual'): continue
         i0 = nd_pos.get(r.get('date', ''))
         if i0 is None or i0 + 66 >= len(nd_sorted): continue
-        if r['card'] == 'P9c_CARRY':
-            f66v = round(100 * (ndx[nd_sorted[i0 + 66]] / ndx[nd_sorted[i0]] - 1), 2)
+        if r['card'] in ('P9c_CARRY', 'P12_KINK'):
+            _h = 22 if r['card'] == 'P12_KINK' else 66
+            if i0 + _h >= len(nd_sorted): continue
+            f66v = round(100 * (ndx[nd_sorted[i0 + _h]] / ndx[nd_sorted[i0]] - 1), 2)
             r['fwd22_actual'] = f66v; r['pass'] = 'Y' if f66v > 0 else 'N'
         else:
             wvals = [ndx[nd_sorted[j]] for j in range(i0, i0 + 67)]
@@ -774,6 +801,10 @@ if event:
             f"[IF B2·침체공포] L3 부호 반전 주의: 채권 스트레스=가격 완료=반등 신호 (L3값 {L3v} 역독)",
             f"[IF F칸·정책] L5 구리/금 22일 {cu22}% → {'재가격 완료(반등 우세)' if (cu22 is not None and cu22 < -3) else ('미완(정체 경계)' if (cu22 is not None and cu22 > 3) else '중립')}",
             f"[IF A칸 공통] L4 = min(MOVE {mp}, SKEW백분위 {skp}) = {L4v} (2023~ 약화 — 참고)",
+            f"[IF E칸·실적] 카드14: BEI커브 {bei_curve_v}pp → {'역전=강경고(1개월 15%)' if (bei_curve_v is not None and bei_curve_v <= 0) else '정상=우호'} | 시즌 첫 사건만 정보(후속은 소음) | 긴축기 실적 랠리 fake",
+            f"[IF F칸·관세] 카드15: RF 실적(과거 1년 내 타격→전면구제 ≤7일) 보유 시 타격 매수(+12.4%/100%), 무실적 관망 — 세션 수동 판독(P11)",
+            f"[IF F칸·재정] 카드16: 대치형=시한부 매수(킹크 {kink_v}pp 병독) / 부양형=규모·확정·금리소화 3게이지",
+            f"[IF G칸·무촉매 상승] 카드18: 뉴스 없는 급등이면 fake 우세(44%) — 추격 금지, 되돌림은 1개월 종결",
             f"[체크포인트] 10거래일 뒤 사건일 종가 대비 음수면 fake 분류 확정 (대장 자동 채점)",
         ]
         led_p = f'{D}/forward_count_ledger.csv'

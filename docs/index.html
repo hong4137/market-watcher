@@ -59,6 +59,7 @@
  <h2>최근 큰 변동의 한 달 성적표 (자동 채점)</h2>
  <table id="ledgerT"></table>
  <div class="note">급등·급락이 있던 날로부터 한 달(22거래일) 뒤 실제로 어떻게 됐는지 자동으로 채점합니다.</div>
+<div class="card" id="pBoard" style="display:none"><h2>검증 진행판 — 시장이 채점 중인 규칙들</h2><div class="note" style="margin:-2px 0 8px">사전에 등록한 규칙이 실제로 맞는지, 새 사건이 올 때마다 자동으로 적립·채점됩니다. 합격선 미달 시 그 규칙은 은퇴합니다.</div><div id="pBoardT"></div></div>
 </div>
 
 <div class="legend">● 초록 평온 · ● 노랑 긴장 · ● 빨강 위험 · ● 회색 데이터 없음/휴면</div>
@@ -105,6 +106,23 @@ const GNAME={
  '딜러 순포지션':['중개사(딜러) 포지션','음수 지속이면 시장 구조 불안정'],
  'DIX':['다크풀 매집 지표','높을수록 큰손이 조용히 사는 중'],
  'GEX($B)':['옵션 딜러 감마','음수면 변동을 증폭시키는 시장 구조'],
+ 'BEI 커브 (10Y−5Y 기대인플레, pp)':['인플레 제약 게이지','0 이하로 역전되면 연준이 굽힐 수 없는 국면 — 실적 사건에 최악(1개월 15%)'],
+ 'BDC 상대강도 66일 (ARCC−SPX, %p)':['사모신용 체감 지표','상장 사모신용 회사들의 상대 성적. −8 이하면 사모신용 스트레스 진행 — 급락 원인 감별용'],
+ 'CLO 메자닌 상대 22일 (JBBB−JAAA, %p)':['대출시장 하위등급 온도','큰 음수면 레버리지 대출 쪽 스트레스'],
+ '엔 캐리 게이지 (USDJPY 5일 %)':['엔 캐리 청산 감지','큰 음수(엔 급등)=캐리 청산 진행. 공포 국면(VIX 25↑) 동반이면 역사적 매수 구간'],
+ '엔 투기 포지션 52주 백분위':['엔 숏 쏠림','10 이하면 캐리 과밀 — 청산이 시작되면 커지는 조건(타이밍 아님)'],
+ '은행 우선주 상대 22일 (PFF−LQD, %p)':['은행 자본 스트레스','−10 이하면 시스템급(2008형), 0 근처면 국지. 은행 사건 시 강도 판독'],
+ 'NFCI 레버리지 서브지수':['레버리지 과열 배경','높으면 빚이 쌓인 취약 배경(참고용 — 타이밍 아님)'],
+ '위험 2층: 장작(배경)×불씨(발화)':['위험 현황판','배경 취약성과 발화 신호의 분해 표시(참고용)'],
+ '신용 스프레드 (BAA−AAA)':['회사채 신용 온도','낮은 수준에서 상승 전환하면 신용 사이클 초입 경계(참고)'],
+ '하이일드 스프레드 22일 변화(pp)':['정크본드 스트레스 변화','급확대면 신용 재가격 진행'],
+ 'OFR 신용 서브지수 22일 변화':['시스템 신용 스트레스 변화','+0.3 이상이며 시장이 평온하면 2007형 괴리 관찰'],
+ 'Y2−EFFR 사이클 게이지(pp)':['금리 사이클 위치','+0.25 이하면 완화·종점(지표 사건 우호), 그 위면 긴축기(랠리도 fake)'],
+ '구리/금 22일 변화(%)':['실물 재가격 게이지','큰 음수면 경기 타격이 이미 상품시장에 반영 — 침체공포·정책 사건 시 반등 우세'],
+ '구리/금 22일 (카드8·15 병용, %)':['실물 재가격 게이지','큰 음수면 정책 충격이 이미 가격에 반영 — 관세 타격 시 매수 축'],
+ '재정 대치 스위치 (TGA 13주)':['재정 대치 감지','재무부 곳간이 13주에 40% 이상 급감하면 부채한도 대치 중이라는 기계 신호'],
+ '국채 킹크 (4주−3개월, pp)':['디폴트 공포 체온계','대치 중 +0.2 이상이면 공포가 가격에 다 반영된 절정 — 역사적으로 그 후 한 달 95% 상승'],
+ '엔 캐리 게이지 (USDJPY 5일 %)':['엔 캐리 청산 감지','큰 음수=캐리 청산 진행. VIX 25 이상 동반이면 매수 구간'],
  'Y2−EFFR 사이클 게이지(pp)':['금리 사이클 위치','+0.25 이하면 인상 사이클 종점·인하기(지표 사건에 우호), 그 위면 긴축기(경계)'],
  '구리/금 22일 변화(%)':['구리/금 비율 한 달 변화','큰 음수면 경기 둔화가 이미 상품시장에 반영됨 — 침체공포 사건 시 반등 우세'],
 };
@@ -132,6 +150,10 @@ function trCard(c){
   .replace('[IF B2·침체공포] L3 부호 반전 주의',"[원인이 '침체 공포'면] 역해석 주의")
   .replace('[IF F칸·정책] L5 구리/금 22일',"[원인이 '관세·정책'이면] 구리/금 재가격")
   .replace('[IF A칸 공통] L4','[연준 관련 공통 보조]')
+  .replace('[IF E칸·실적] 카드14',"[원인이 '빅테크 실적'이면] 인플레 제약·시즌 판독")
+  .replace('[IF F칸·관세] 카드15',"[원인이 '관세'면] 정권이 굽히는가(RF 실적)")
+  .replace('[IF F칸·재정] 카드16',"[원인이 '재정 대치·부양'이면] 유형별 판독")
+  .replace('[IF G칸·무촉매 상승] 카드18',"[뉴스 없는 급등이면] 추격 금지")
   .replace('[체크포인트]','[10일 뒤 확인]');
 }
 
@@ -140,9 +162,10 @@ fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
 
  // 경계 계기 이름 수집
  const hotG=[],warnG=[];
- Object.values(s.panels).forEach(p=>p.g.forEach(g=>{
-   if(g.state==='hot')hotG.push(tr(g.name)[0]);
-   else if(g.state==='warn')warnG.push(tr(g.name)[0]);
+ Object.entries(s.panels).forEach(([k,p])=>p.g.forEach(g=>{
+   const pn=(PNAME[k]||[p.title])[0].split(' (')[0];
+   if(g.state==='hot')hotG.push(pn+' · '+tr(g.name)[0]);
+   else if(g.state==='warn')warnG.push(pn+' · '+tr(g.name)[0]);
  }));
  let vcls='up',vtxt='평온한 하루',vsub='큰 변동 없음. 위험 신호도 켜진 것이 없습니다.';
  if(warnG.length+hotG.length>0){
@@ -180,13 +203,16 @@ fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
   const p=s.panels[k]; if(!p)return '';
   const anyHot=p.g.some(g=>g.state==='hot'), anyWarn=p.g.some(g=>g.state==='warn');
   const pn=PNAME[k]||[p.title,''];
+  const lit=p.g.filter(g=>g.state==='hot'||g.state==='warn');
+  const openAttr=(anyHot||anyWarn||k==='REGIME')?' open':'';
   return `<div class="card" ${anyHot?'style="border-color:#f85149"':anyWarn?'style="border-color:#d2992288"':''}>
-   <h2>${pn[0]}${anyHot?' <span class="tag t-hot">위험</span>':''}</h2>
-   <div class="note" style="margin:-2px 0 8px">${pn[1]}</div>
+   <details${openAttr}><summary style="font-size:1em;color:inherit"><b>${pn[0]}</b>${anyHot?' <span class="tag t-hot">위험</span>':''}${lit.length?` <span class="dim" style="font-size:.8em">— 점등 ${lit.length}개: ${lit.map(g=>tr(g.name)[0]).join(', ')}</span>`:' <span class="dim" style="font-size:.8em">— 이상 없음</span>'}</summary>
+   <div class="note" style="margin:4px 0 8px">${pn[1]}</div>
    ${p.g.map(g=>{const t=tr(g.name);return `<div class="grow"><div style="flex:1"><div class="gname">${t[0]}</div>
      <div class="gread">${t[1]||g.read}</div></div>
      <div class="gval">${S(g.val)}<span class="dot d-${g.state}"></span></div></div>`}).join('')}
    <details><summary>연구 원문 (전문가용)</summary><div class="note">${p.title} — ${p.grammar}<br>${p.g.map(g=>g.name+': '+g.read).join(' / ')}</div></details>
+   </details>
   </div>`;
  }).join('');
 }).catch(e=>document.getElementById('err').textContent='데이터 로드 실패: '+e);
@@ -211,6 +237,19 @@ fetch('data/forward_count_ledger.csv?t='+Date.now()).then(r=>r.text()).then(t=>{
     const cls=!done?'dim':(parseFloat(f)>=0?'up':'down');
     return `<tr><td>${c[0]}</td><td class="${parseFloat(c[1])>=0?'up':'down'}">${parseFloat(c[1])>0?'+':''}${c[1]}%</td><td class="dim">${c[6]||''}</td><td class="${cls}">${done?(parseFloat(f)>0?'+':'')+f+'%':'채점 대기'}</td></tr>`;
   }).join('');
+ // ── 검증 진행판 (P 시리즈 현황)
+ const PMETA={'P1_L2p':['P1 저변동 하방 게이지','채점 15건 대기'],'P2_L1':['P2 항복 식별','80 이상 발동 시 카운트'],'P3_L1p':['P3 회복 서열','15건 적립'],'P5_R1_후보':['P5 매파 상승 되돌림','태깅 후 판정'],'P8_OBS20':['P8 두 달째 역전(긴축기)','합격선: 첫 10건 중 6+'],'P9a_G':['P9a 굳은 장작 위 불씨','첫 5건 중 2+ (이력 축적 중)'],'P9c_CARRY':['P9c 엔 캐리 항복 매수','첫 8건 중 6+'],'P12_KINK':['P12 재정 킹크','첫 4건 중 3+']};
+ const agg={};
+ rows.forEach(c=>{ const k=c[3]; if(!PMETA[k])return; if(!agg[k])agg[k]={n:0,done:0,pass:0}; agg[k].n++; if(c[7]!=='')agg[k].done++; if(c[8]==='Y')agg[k].pass++; });
+ const pk=Object.keys(PMETA).filter(k=>true);
+ const pEl=document.getElementById('pBoard');
+ if(pEl){ pEl.style.display='block';
+  document.getElementById('pBoardT').innerHTML=pk.map(k=>{
+   const a=agg[k]||{n:0,done:0,pass:0}; const m=PMETA[k];
+   const st=a.n===0?'<span class="dim">대기 — 조건 발생 시 자동 적립</span>':`적립 ${a.n} · 채점 ${a.done} · 적중 ${a.pass}`;
+   return `<div class="grow"><div style="flex:1"><div class="gname">${m[0]}</div><div class="gread">${m[1]}</div></div><div style="font-size:.85em">${st}</div></div>`;
+  }).join('');
+ }
 }).catch(()=>{});
 
 fetch('data/daily_scorecard.csv?t='+Date.now()).then(r=>r.text()).then(t=>{
