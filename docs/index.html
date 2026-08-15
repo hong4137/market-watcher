@@ -9,7 +9,23 @@
        --up:#3fb950;--down:#f85149;--warn:#d29922}
  *{box-sizing:border-box}
  body{font-family:-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);
-      margin:0;padding:14px;max-width:680px;margin:auto;line-height:1.55}
+      margin:0;padding:14px;max-width:1400px;margin:auto;line-height:1.55}
+ .topgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:stretch}
+ #panels{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px;align-items:start}
+ #panels .card{margin:0}
+ .botgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+ .botgrid .card{margin:0}
+ @media(max-width:980px){.topgrid,.botgrid{grid-template-columns:1fr}#panels{grid-template-columns:1fr}body{max-width:680px}}
+ .gbar{position:relative;height:10px;border-radius:5px;margin:7px 0 16px;background:#21262d;overflow:visible}
+ .gzone{position:absolute;top:0;height:100%;opacity:.42}
+ .gz-ok{background:#2ea043}.gz-warn{background:#d29922}.gz-hot{background:#f85149}
+ .gtick{position:absolute;top:-3px;width:2px;height:16px;background:#8b949e88}
+ .gticklab{position:absolute;top:13px;font-size:.62em;color:var(--dim);transform:translateX(-50%);white-space:nowrap}
+ .gmark{position:absolute;top:-4px;width:4px;height:18px;border-radius:2px;background:#e6edf3;box-shadow:0 0 5px #000}
+ .gm-warn{background:#d29922}.gm-hot{background:#f85149}
+ .grangelab{position:absolute;top:13px;font-size:.62em;color:#484f58}
+ .gdetail{font-size:.72em;color:var(--dim);line-height:1.65;margin:2px 0 4px}
+ .donut{transform:rotate(-90deg)}
  h1{font-size:1.1em;margin:0 0 2px;letter-spacing:.5px}
  .sub{font-size:.75em;color:var(--dim);margin-bottom:12px}
  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:10px 0}
@@ -47,19 +63,24 @@
 <div id="err"></div>
 
 <div class="card verdict" id="verdict"></div>
-<div class="card" id="priceCard"></div>
-<div class="card" id="monthly"></div>
+<div class="topgrid">
+<div class="card" id="priceCard" style="margin:0"></div>
+<div class="card" id="monthly" style="margin:0"></div>
+<div class="card" id="cardsPanelSlot" style="margin:0;display:none"></div>
+</div>
 <div class="card" id="cardsPanel" style="display:none;border-color:#d29922">
  <h2>큰 변동 발생 — 상황별 판독</h2>
  <div class="note" style="margin-bottom:8px">아래는 "이 급변의 원인이 무엇이냐"에 따라 갈리는 판독입니다.
  뉴스에서 원인을 확인한 뒤 해당 줄만 읽으면 됩니다.</div>
  <div id="cardsList" class="note" style="line-height:1.9"></div>
 </div>
+<div class="botgrid">
 <div class="card" id="ledgerPanel" style="display:none">
  <h2>최근 큰 변동의 한 달 성적표 (자동 채점)</h2>
  <table id="ledgerT"></table>
  <div class="note">급등·급락이 있던 날로부터 한 달(22거래일) 뒤 실제로 어떻게 됐는지 자동으로 채점합니다.</div>
 <div class="card" id="pBoard" style="display:none"><h2>검증 진행판 — 시장이 채점 중인 규칙들</h2><div class="note" style="margin:-2px 0 8px">사전에 등록한 규칙이 실제로 맞는지, 새 사건이 올 때마다 자동으로 적립·채점됩니다. 합격선 미달 시 그 규칙은 은퇴합니다.</div><div id="pBoardT"></div></div>
+</div>
 </div>
 
 <div class="legend">● 초록 평온 · ● 노랑 긴장 · ● 빨강 위험 · ● 회색 데이터 없음/휴면</div>
@@ -138,6 +159,57 @@ const PNAME={
  'G':['시장 내부 수급','뉴스 없이 옵션·공매도 구조가 만드는 급변'],
 };
 function tr(name){ return GNAME[name]||[name,null]; }
+const GMETA={
+ 'VIX':{lo:10,hi:50,zones:[[10,20,'ok'],[20,28,'warn'],[28,50,'hot']],ticks:[[28,'공포'],[35,'폭풍']]},
+ 'VIX 1년 백분위':{lo:0,hi:100,zones:[[0,80,'ok'],[80,90,'warn'],[90,100,'hot']],ticks:[[90,'경계']]},
+ 'VIX 상대급변 백분위':{lo:0,hi:100,zones:[[0,95,'ok'],[95,100,'hot']],ticks:[[95,'급변']]},
+ '60일 고점 대비(%)':{lo:-25,hi:0,zones:[[-25,-10,'hot'],[-10,-5,'warn'],[-5,0,'ok']],ticks:[[-10,'조정']]},
+ 'MOVE×커브 결합백분위 [탐사]':{lo:0,hi:100,zones:[[0,80,'ok'],[80,90,'warn'],[90,100,'hot']],ticks:[[90,'경계']]},
+ '2Y 당일 변화(pp)':{lo:-0.3,hi:0.3,zones:[[-0.3,-0.1,'warn'],[-0.1,0.1,'ok'],[0.1,0.3,'warn']],ticks:[[-0.1,''],[0.1,'서프라이즈급']]},
+ '10Y 당일 변화(pp)':{lo:-0.3,hi:0.3,zones:[[-0.3,-0.15,'warn'],[-0.15,0.15,'ok'],[0.15,0.3,'warn']],ticks:[]},
+ 'Y2−EFFR 사이클 게이지(pp)':{lo:-2,hi:2,zones:[[-2,0.25,'ok'],[0.25,2,'warn']],ticks:[[0.25,'긴축 경계']]},
+ '구리/금 22일 변화(%)':{lo:-15,hi:15,zones:[[-15,-3,'ok'],[-3,3,'warn'],[3,15,'warn']],ticks:[[-3,'재가격 완료권']]},
+ '구리/금 22일 (카드8·15 병용, %)':{lo:-15,hi:15,zones:[[-15,-3,'ok'],[-3,3,'warn'],[3,15,'warn']],ticks:[[-3,'재가격 완료권']]},
+ 'MOVE':{lo:40,hi:200,zones:[[40,79,'ok'],[79,120,'warn'],[120,200,'hot']],ticks:[[79,'긴장'],[120,'발작']]},
+ 'MOVE 5일 변화':{lo:-30,hi:30,zones:[[-30,10,'ok'],[10,30,'warn']],ticks:[]},
+ '신용 스프레드 (BAA−AAA)':{lo:0.3,hi:3.5,zones:[[0.3,0.9,'ok'],[0.9,1.5,'warn'],[1.5,3.5,'hot']],ticks:[[0.9,'중앙값']]},
+ '하이일드 스프레드 22일 변화(pp)':{lo:-1,hi:1,zones:[[-1,0.4,'ok'],[0.4,1,'hot']],ticks:[[0.4,'급확대']]},
+ 'OFR 신용 서브지수 22일 변화':{lo:-1,hi:1,zones:[[-1,0.3,'ok'],[0.3,1,'warn']],ticks:[[0.3,'괴리 관찰']]},
+ 'BDC 상대강도 66일 (ARCC−SPX, %p)':{lo:-25,hi:10,zones:[[-25,-8,'hot'],[-8,-3,'warn'],[-3,10,'ok']],ticks:[[-8,'스트레스']]},
+ 'CLO 메자닌 상대 22일 (JBBB−JAAA, %p)':{lo:-5,hi:3,zones:[[-5,-1,'warn'],[-1,3,'ok']],ticks:[[-1,'경계']]},
+ '엔 캐리 게이지 (USDJPY 5일 %)':{lo:-8,hi:8,zones:[[-8,-3,'hot'],[-3,8,'ok']],ticks:[[-3,'청산 진행']]},
+ '엔 투기 포지션 52주 백분위':{lo:0,hi:100,zones:[[0,10,'hot'],[10,30,'warn'],[30,100,'ok']],ticks:[[10,'과밀']]},
+ '은행 우선주 상대 22일 (PFF−LQD, %p)':{lo:-15,hi:5,zones:[[-15,-10,'hot'],[-10,-5,'warn'],[-5,5,'ok']],ticks:[[-5,'국지'],[-10,'시스템급']]},
+ 'NFCI 레버리지 서브지수':{lo:-1,hi:1,zones:[[-1,0.1,'ok'],[0.1,1,'warn']],ticks:[[0.1,'과열 배경']]},
+ 'smh_gap (SMH−NDX)':{lo:-6,hi:6,zones:[[-6,-3,'hot'],[-3,-2,'warn'],[-2,6,'ok']],ticks:[[-3,'반도체발']]},
+ 'BEI 커브 (10Y−5Y 기대인플레, pp)':{lo:-0.4,hi:0.6,zones:[[-0.4,0,'hot'],[0,0.1,'warn'],[0.1,0.6,'ok']],ticks:[[0,'역전=제약']]},
+ '국채 킹크 (4주−3개월, pp)':{lo:-0.3,hi:0.6,zones:[[-0.3,0.2,'ok'],[0.2,0.6,'warn']],ticks:[[0.2,'공포 절정(대치 중이면 매수 신호)']]},
+ 'EPU 역사 백분위':{lo:0,hi:100,zones:[[0,90,'ok'],[90,100,'warn']],ticks:[[90,'극단']]},
+ 'GEX($B)':{lo:-5,hi:15,zones:[[-5,0,'warn'],[0,15,'ok']],ticks:[[0,'숏감마 경계']]},
+ 'SVR 20일 상대':{lo:0,hi:100,zones:[[0,20,'warn'],[20,80,'ok'],[80,100,'warn']],ticks:[[20,'저공매도'],[80,'과밀']]},
+ 'Equity P/C':{lo:0.3,hi:1.2,zones:[[0.3,0.55,'warn'],[0.55,1.2,'ok']],ticks:[[0.55,'과열 낙관']]},
+ 'NSP 52주 백분위':{lo:0,hi:100,zones:[[0,80,'ok'],[80,100,'warn']],ticks:[[80,'과밀']]},
+};
+function gbar(name,val,state){
+ let m=GMETA[name];
+ if(!m && /백분위/.test(name)) m={lo:0,hi:100,zones:[[0,80,'ok'],[80,100,'warn']],ticks:[[80,'']]};
+ const v=parseFloat(val);
+ if(!m || isNaN(v)) return '';
+ const P=x=>Math.max(0,Math.min(100,100*(x-m.lo)/(m.hi-m.lo)));
+ const zones=m.zones.map(z=>`<div class="gzone gz-${z[2]}" style="left:${P(z[0])}%;width:${P(z[1])-P(z[0])}%"></div>`).join('');
+ const ticks=m.ticks.map(tk=>`<div class="gtick" style="left:${P(tk[0])}%"></div>`+(tk[1]?`<div class="gticklab" style="left:${P(tk[0])}%">${tk[0]} ${tk[1]}</div>`:'')).join('');
+ const mk=`<div class="gmark ${state==='hot'?'gm-hot':state==='warn'?'gm-warn':''}" style="left:calc(${P(v)}% - 2px)"></div>`;
+ return `<div class="gbar">${zones}${ticks}${mk}<div class="grangelab" style="left:0">${m.lo}</div><div class="grangelab" style="right:0">${m.hi}</div></div>`;
+}
+function donut(val,max,color,label,sub){
+ const r=34,c=2*Math.PI*r,f=Math.max(0,Math.min(1,val/max));
+ return `<svg width="92" height="92" viewBox="0 0 92 92"><circle cx="46" cy="46" r="${r}" fill="none" stroke="#21262d" stroke-width="9"/>
+  <circle class="donut" cx="46" cy="46" r="${r}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round"
+   stroke-dasharray="${(f*c).toFixed(1)} ${c.toFixed(1)}" style="transform-origin:46px 46px"/>
+  <text x="46" y="44" text-anchor="middle" fill="#e6edf3" font-size="19" font-weight="700">${val}</text>
+  <text x="46" y="60" text-anchor="middle" fill="#8b949e" font-size="9">${label}</text></svg>`;
+}
+
 
 function trCard(c){
  // 카드 문안 일반어 치환
@@ -178,13 +250,14 @@ fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
  document.getElementById('verdict').innerHTML=`<div class="vbig ${vcls}">${vtxt}</div><div class="vsub">${vsub}</div>`;
 
  const up=s.ret1_pct>=0, sg=v=>(v>0?'+':'')+Number(v).toFixed(2);
+ const vixColor=s.vix>=35?'#f85149':s.vix>=28?'#d29922':s.vix>=20?'#d2b022':'#2ea043';
  document.getElementById('priceCard').innerHTML=
-  `<div class="prow"><div><div class="price">${Number(s.ndx).toLocaleString()}</div>
-   <div class="dim" style="font-size:.76em">나스닥100 종가</div></div>
-   <div style="text-align:right">
-   <div class="${up?'up':'down'}" style="font-size:1.1em;font-weight:600">오늘 ${sg(s.ret1_pct)}%</div>
-   <div class="dim" style="font-size:.8em">최근 3일 ${sg(s.cum3_pct)}% · 공포지수 ${S(s.vix)}</div>
-   <div class="dim" style="font-size:.78em">"큰 변동" 기준(하루 ±2%)까지 ${(2-Math.abs(s.ret1_pct)).toFixed(2)}%p 여유</div></div></div>`;
+  `<div class="prow" style="align-items:center"><div><div class="price">${Number(s.ndx).toLocaleString()}</div>
+   <div class="dim" style="font-size:.76em">나스닥100 종가</div>
+   <div class="${up?'up':'down'}" style="font-size:1.05em;font-weight:600;margin-top:6px">오늘 ${sg(s.ret1_pct)}%</div>
+   <div class="dim" style="font-size:.78em">최근 3일 ${sg(s.cum3_pct)}% · "큰 변동"(±2%)까지 ${(2-Math.abs(s.ret1_pct)).toFixed(2)}%p 여유</div></div>
+   <div style="text-align:center">${donut(S(s.vix),50,vixColor,'공포지수 VIX')}
+   <div class="dim" style="font-size:.68em;margin-top:-4px">28 공포 · 35 폭풍</div></div></div>`;
 
  const m=s.monthly, mc={BOUNCE:'up',NO_CALL:'warn',NO_ASSET:'warn',NONE:'dim'}[m.stance]||'dim';
  const mLabel={BOUNCE:'반등 우세',NO_CALL:'판정 불가 — 근거 규칙 없음',NO_ASSET:'상승 급변 — 전망 규칙 없음',NONE:'큰 변동 없음 — 전망할 것 없음'}[m.stance]||m.label;
@@ -204,13 +277,17 @@ fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
   const anyHot=p.g.some(g=>g.state==='hot'), anyWarn=p.g.some(g=>g.state==='warn');
   const pn=PNAME[k]||[p.title,''];
   const lit=p.g.filter(g=>g.state==='hot'||g.state==='warn');
-  const openAttr=(anyHot||anyWarn||k==='REGIME')?' open':'';
+  const wide=window.innerWidth>980; const openAttr=(wide||anyHot||anyWarn||k==='REGIME')?' open':'';
   return `<div class="card" ${anyHot?'style="border-color:#f85149"':anyWarn?'style="border-color:#d2992288"':''}>
    <details${openAttr}><summary style="font-size:1em;color:inherit"><b>${pn[0]}</b>${anyHot?' <span class="tag t-hot">위험</span>':''}${lit.length?` <span class="dim" style="font-size:.8em">— 점등 ${lit.length}개: ${lit.map(g=>tr(g.name)[0]).join(', ')}</span>`:' <span class="dim" style="font-size:.8em">— 이상 없음</span>'}</summary>
    <div class="note" style="margin:4px 0 8px">${pn[1]}</div>
-   ${p.g.map(g=>{const t=tr(g.name);return `<div class="grow"><div style="flex:1"><div class="gname">${t[0]}</div>
-     <div class="gread">${t[1]||g.read}</div></div>
-     <div class="gval">${S(g.val)}<span class="dot d-${g.state}"></span></div></div>`}).join('')}
+   ${p.g.map(g=>{const t=tr(g.name);return `<div class="grow" style="display:block;border-bottom:1px solid #21262d;padding:9px 0">
+     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
+       <div class="gname">${t[0]}</div>
+       <div class="gval">${S(g.val)}<span class="dot d-${g.state}"></span></div></div>
+     <div class="gdetail">${t[1]||''}</div>
+     ${gbar(g.name,g.val,g.state)}
+     <div class="gdetail" style="color:#6e7681">${g.read}</div></div>`}).join('')}
    <details><summary>연구 원문 (전문가용)</summary><div class="note">${p.title} — ${p.grammar}<br>${p.g.map(g=>g.name+': '+g.read).join(' / ')}</div></details>
    </details>
   </div>`;
