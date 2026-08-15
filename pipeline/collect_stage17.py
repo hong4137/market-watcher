@@ -27,7 +27,9 @@ FRED_SERIES = [
     ('DGS1', 'y1'), ('DGS2', 'y2_hist'), ('DFF', 'effr_full'),
     ('BAMLH0A0HYM2', 'hy_oas_full'), ('BAMLC0A0CM', 'ig_oas_full'),
     ('BAMLH0A3HYC', 'ccc_oas'), ('WLCFLPCL', 'disc_window'), ('TOTCI', 'ci_loans'), ('DRTSCILM', 'sloos_ci'),
-    ('DCPF3M', 'cp3m'), ('DTB3', 'tb3m'), ('DPSACBW027SBOG', 'deposits'), ('DEXJPUS', 'jpy_fred'), ('DEXCHUS', 'cny_fred'), ('NFCICREDIT', 'nfci_credit'), ('NFCILEVERAGE', 'nfci_lev'),
+    ('DCPF3M', 'cp3m'), ('DTB3', 'tb3m'), ('DPSACBW027SBOG', 'deposits'), ('DEXJPUS', 'jpy_fred'), ('DEXCHUS', 'cny_fred'),
+    ('WTREGEN', 'tga'), ('THREEFYTP10', 'tp10'), ('DTB4WK', 'bill4w'), ('TREAST', 'fed_treasuries'),
+    ('MTSDS133FMS', 'deficit_m'), ('EPUFISCAL', 'epu_fiscal'), ('NFCICREDIT', 'nfci_credit'), ('NFCILEVERAGE', 'nfci_lev'),
     ('NFCIRISK', 'nfci_risk'), ('COMPOUT', 'cp_out'), ('TOTBKCR', 'bank_credit'),
     ('DBAA', 'baa_full'), ('DAAA', 'aaa_full'),
 ]
