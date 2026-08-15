@@ -48,7 +48,7 @@ YAHOO_SYMS = [
     ('USO', 'uso'), ('DBA', 'dba'), ('UUP', 'uup'), ('EEM', 'eem'),
     ('FXI', 'fxi'), ('GDX', 'gdx'), ('VNQ', 'vnq'), ('RSP', 'rsp'),
     ('NG=F', 'natgas'), ('^GSPC', 'spx'),
-    ('JPY=X', 'usdjpy'), ('CNY=X', 'usdcny'), ('CHF=X', 'usdchf'), ('FXY', 'fxy'), ('CEW', 'cew'),
+    ('JPY=X', 'usdjpy'), ('CNY=X', 'usdcny'), ('CHF=X', 'usdchf'), ('FXY', 'fxy'), ('CEW', 'cew'), ('IPO', 'ipo_etf'),
     ('ARCC', 'arcc'), ('BIZD', 'bizd'), ('FSK', 'fsk'), ('MAIN', 'main_bdc'), ('PSEC', 'psec'),
     ('APO', 'apo'), ('ARES', 'ares'), ('OWL', 'owl'), ('BX', 'bx'), ('KKR', 'kkr'),
     ('JAAA', 'jaaa'), ('JBBB', 'jbbb'), ('BKLN', 'bkln'), ('SRLN', 'srln'),
