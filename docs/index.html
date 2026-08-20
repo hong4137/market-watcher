@@ -159,6 +159,8 @@ const PNAME={
  'G':['시장 내부 수급','뉴스 없이 옵션·공매도 구조가 만드는 급변'],
 };
 function tr(name){ return GNAME[name]||[name,null]; }
+const OBSGRADE=new Set(['NFCI 레버리지 서브지수','위험 2층: 장작(배경)×불씨(발화)','신용 스프레드 (BAA−AAA)','하이일드 스프레드 22일 변화(pp)','OFR 신용 서브지수 22일 변화','엔 투기 포지션 52주 백분위','SVR 20일 상대','Equity P/C','NSP 52주 백분위','딜러 순포지션','DIX','GEX($B)','달러 당일 %','WTI 당일 %','EPU 역사 백분위','MOVE 5일 변화','CLO 메자닌 상대 22일 (JBBB−JAAA, %p)']);
+
 const GMETA={
  'VIX':{lo:8,hi:60,zones:[[8,20,'ok'],[20,28,'warn'],[28,60,'hot']],ticks:[[28,'공포'],[35,'폭풍']]},
  'VIX 1년 백분위':{lo:0,hi:100,zones:[[0,80,'ok'],[80,90,'warn'],[90,100,'hot']],ticks:[[90,'경계']]},
@@ -233,16 +235,25 @@ fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
  document.getElementById('sub').textContent=`기준일 ${s.date} · 매 거래일 저녁(한국시간) 자동 갱신`;
 
  // 경계 계기 이름 수집
- const hotG=[],warnG=[];
+ const hotG=[],warnG=[],obsG=[];
  Object.entries(s.panels).forEach(([k,p])=>p.g.forEach(g=>{
    const pn=(PNAME[k]||[p.title])[0].split(' (')[0];
-   if(g.state==='hot')hotG.push(pn+' · '+tr(g.name)[0]);
-   else if(g.state==='warn')warnG.push(pn+' · '+tr(g.name)[0]);
+   const lab=pn+' · '+tr(g.name)[0];
+   if(g.state==='hot'||g.state==='warn'){
+     if(OBSGRADE.has(g.name)) obsG.push(lab);
+     else if(g.state==='hot') hotG.push(lab);
+     else warnG.push(lab);
+   }
  }));
  let vcls='up',vtxt='평온한 하루',vsub='큰 변동 없음. 위험 신호도 켜진 것이 없습니다.';
- if(warnG.length+hotG.length>0){
-   vcls='warn';vtxt=`평시 — 긴장 신호 ${warnG.length+hotG.length}개`;
-   vsub='긴장이 켜진 계기: <b>'+[...hotG,...warnG].join('</b>, <b>')+'</b>. 아래에서 해당 항목을 확인하세요.';
+ const core=warnG.length+hotG.length;
+ if(core>0){
+   vcls='warn';vtxt=`평시 — 긴장 신호 ${core}개`;
+   vsub='긴장이 켜진 계기: <b>'+[...hotG,...warnG].join('</b>, <b>')+'</b>.';
+ }
+ if(obsG.length>0){
+   vsub=(core>0?vsub+'<br>':'')+`<span style="color:#8b949e">참고 점등 ${obsG.length}개 (관찰·배경 등급 — 경보 아님): ${obsG.join(', ')}</span>`;
+   if(core===0){vcls='up';vtxt='평온 — 판정급 신호 없음';}
  }
  if(s.vix>=28){vcls='warn';vtxt='공포 국면 (VIX 28 이상)';vsub='과거 이 국면의 급락은 한 달 내 반등한 경우가 84~94%였습니다 (단, 국면 첫날은 예외가 많음).';}
  if(s.vix>=35){vcls='down';vtxt='폭풍 — VIX 35 이상';vsub='과거 이 수준에서는 열흘 안에 반드시 큰 변동이 왔습니다 (11번 중 11번).';}

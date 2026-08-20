@@ -502,7 +502,7 @@ panels = {
    'g': [gauge('구리/금 22일 변화(%)', cu22v, '큰 음수(이미 급락)면 침체 재가격 완료 — 사건 시 반등 우세', 'na' if cu22v is None else 'ok'),
          gauge('10Y 당일 변화(pp)', y10c1, '장기 재가격', 'na' if y10c1 is None else 'ok')]},
  'C': {'title': 'C 지정학·충격 (78건)', 'grammar': '에너지·통화형=달러 용량계(상관 0.69)·유가 보조. 보건형=VIX 경로만. 방향 비대칭: 고조 달러 0.57 / 완화 방출 0.33(#080).',
-   'g': [gauge('달러 당일 %', dxc1, '급등=고조 용량', st(dxc1 is not None and abs(dxc1) >= 0.5, missing=dxc1 is None)),
+   'g': [gauge('달러 당일 %', dxc1, '급등(+0.5↑)=고조 용량 — 하락은 무해(완화·방출 신호)', st(dxc1 is not None and dxc1 >= 0.5, missing=dxc1 is None)),
          gauge('WTI 당일 %', wtc1, '보조 용량계', st(wtc1 is not None and abs(wtc1) >= 3, missing=wtc1 is None)),
          gauge('EPU 역사 백분위', epu_pct, '정책·확전 소음 수준', st(epu_pct is not None and epu_pct >= 90, missing=epu_pct is None))]},
  'D': {'title': 'D 신용·시스템 (5건)', 'grammar': '표본 5건 — 식 검증 불가. 봉인 관찰(32단계): 2020년대 신용 사건 5/5가 한 달 양수(정책 즉시 개입 시대), 항복 축은 VIX가 아니라 MOVE·OFR(SVB는 VIX 23에 MOVE 170), 저VIX 경고·10일 체크포인트 이식 불가.',
