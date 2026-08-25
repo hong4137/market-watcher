@@ -274,6 +274,7 @@ y2 = {d0: a for d0, (a, b) in tre.items()}; y10 = {d0: b for d0, (a, b) in tre.i
 t_last = sorted(tre)[-1] if tre else None
 epu_last = epu_hist[-1] if epu_hist else None
 epu_pct = pctile([x for _, x in epu_hist], epu_last[1]) if epu_hist else None
+epu_1y = pctile([x for _, x in epu_hist[-365:]], epu_last[1]) if epu_hist and len(epu_hist) >= 180 else epu_pct
 dix_last = dix_hist[-1] if dix_hist else None
 sr = svr_rel(sorted(svr)[-1]) if svr else None
 pc_last = sorted(pc)[-1] if pc else None
@@ -512,7 +513,7 @@ panels = {
  'C': {'title': 'C 지정학·충격 (78건)', 'grammar': '에너지·통화형=달러 용량계(상관 0.69)·유가 보조. 보건형=VIX 경로만. 방향 비대칭: 고조 달러 0.57 / 완화 방출 0.33(#080).',
    'g': [gauge('달러 당일 %', dxc1, '급등(+0.5↑)=고조 용량 — 하락은 무해(완화·방출 신호)', st(dxc1 is not None and dxc1 >= 0.5, missing=dxc1 is None)),
          gauge('WTI 당일 %', wtc1, '보조 용량계', st(wtc1 is not None and abs(wtc1) >= 3, missing=wtc1 is None)),
-         gauge('EPU 역사 백분위', epu_pct, '정책·확전 소음 수준', st(epu_pct is not None and epu_pct >= 90, missing=epu_pct is None))]},
+         gauge('EPU 역사 백분위', epu_1y, f'최근 1년 내 위치 — 전 역사(1985~) {epu_pct}% 참고. 시대상수 주의(#015)', st(epu_1y is not None and epu_1y >= 90, missing=epu_1y is None))]},
  'D': {'title': 'D 신용·시스템 (5건)', 'grammar': '표본 5건 — 식 검증 불가. 봉인 관찰(32단계): 2020년대 신용 사건 5/5가 한 달 양수(정책 즉시 개입 시대), 항복 축은 VIX가 아니라 MOVE·OFR(SVB는 VIX 23에 MOVE 170), 저VIX 경고·10일 체크포인트 이식 불가.',
    'g': [gauge('MOVE', move_d and ys['move'][move_d], '채권 발작 온도계', st(move_d is not None and ys['move'][move_d] >= 120, missing=move_d is None)),
          gauge('MOVE 5일 변화', move_c5, '급등=시스템 경계', 'na' if move_c5 is None else 'ok'),
@@ -533,7 +534,7 @@ panels = {
    'g': [gauge('구리/금 22일 (카드8·15 병용, %)', cu22v, '큰 음수=정책 충격 재가격 완료(관세 타격 시 매수 축 — 반응함수 무관 생존)', 'na' if cu22v is None else 'ok'),
          gauge('재정 대치 스위치 (TGA 13주)', standoff, '한도형 대치의 기계 신호. ON이면 아래 킹크를 매일 판독(P12)', st(standoff is not None and str(standoff).startswith('ON'), missing=standoff is None)),
          gauge('국채 킹크 (4주−3개월, pp)', kink_v, '대치 스위치 ON에서 ≥+0.20 점등 = 디폴트 공포 가격 절정 = 이후 1개월 우호(+8.1%/95%, P12 카운트). 스위치 OFF면 무시', st(kink_v is not None and standoff is not None and str(standoff).startswith('ON') and kink_v >= 0.2, missing=kink_v is None)),
-         gauge('EPU 역사 백분위', epu_pct, 'C칸과 공유 — 수준보다 급변에 주목', 'na' if epu_pct is None else 'ok')]},
+         gauge('EPU 역사 백분위', epu_1y, f'C칸과 공유 — 수준보다 급변에 주목 (전 역사 {epu_pct}%)', 'na' if epu_1y is None else 'ok')]},
  'G': {'title': 'G 기술적·수급 (21건)', 'grammar': '카드18: 뉴스 없는 급등은 fake 우세(−19pp, 방향성 관찰) — 추격 금지. 무촉매 급등은 신고가권 전용 현상. 진원 감별: P/C 과열=모멘텀 / NSP 과밀=스퀴즈 / 숏감마=감마.',
    'g': [gauge('SVR 20일 상대', sr, '≤20 저공매도 / ≥80 숏 과밀(#049)', st(sr is not None and (sr <= 20 or sr >= 80), missing=sr is None)),
          gauge('Equity P/C', pc.get(pc_last), '≤0.55 과열 낙관(#066)', st(pc_last is not None and pc[pc_last] <= 0.55, missing=pc_last is None)),
