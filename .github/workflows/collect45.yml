@@ -1,0 +1,22 @@
+name: collect-stage45
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests openpyxl
+      - run: python pipeline/collect_stage45.py
+      - name: commit
+        run: |
+          git config user.name 'collect-bot'
+          git config user.email 'bot@users.noreply.github.com'
+          git add -A
+          git commit -m "stage45 news-index collect $(date -u +%F)" || echo "no changes"
+          git push
