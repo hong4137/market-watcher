@@ -1,0 +1,12 @@
+(1) TPU_MONTHLY
+Contains:
+DATE - monthly from 1985-2020
+N7 - total number of articles across 7 major newspapers
+TPU_RAW - raw count of TPU-related newspaper articles
+TPU_SHARE - percent share of TPU newspaper articles
+TPU - normalized index of newspaper articles share; equals 100 for an article share of 1 %
+(2) TPU_QUARTERLY
+Contains:
+DATEQ - quarterly from 1985-2020
+TPUQ - quarterly average of monthly TPU
+TARIFFVOL - quarterly tariff volatility estimated with stochastic volatility model

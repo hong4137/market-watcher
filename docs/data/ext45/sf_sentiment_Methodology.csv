@@ -1,0 +1,20 @@
+"This spreadsheet contains updated data series from ""News Sentiment in the Time of COVID-19""",None,None,None,None,None,None,None,None,None
+"by Shelby R. Buckman, Adam Hale Shapiro, Moritz Sudhof, and Daniel J. Wilson",,,,,,,,,
+"Federal Reserve Bank of San Francisco FRBSF Economic Letter 2020-08, April 6, 2020.  ",,,,,,,,,
+https://www.frbsf.org/economic-research/publications/economic-letter/2020/april/news-sentiment-time-of-covid-19/,,,,,,,,,
+"The Data tab contains a news sentiment measure from January 1, 1980, to the latest day available. ",,,,,,,,,
+"The units are the day fixed effects from the following regression, indexed by article. ",,,,,,,,,
+Where,,,,,,,,,
+o             is the positivity score for article ,,,,,,,,,
+o             is a sample-day (t) fixed effect,,,,,,,,,
+o                     is a newspaper*type fixed effect,,,,,,,,,
+Details about the data and methodology can be found in the working paper below. Please cite this paper as the data source. ,,,,,,,,,
+"Shapiro, Adam Hale, Moritz Sudhof, and Daniel J. Wilson. 2020. ""Measuring News Sentiment.” ",,,,,,,,,
+    Federal Reserve Bank of San Francisco Working Paper 2017-01. https://doi.org/10.24148/wp2017-01,,,,,,,,,
+"As of April 2021, the series was updated to use underlying data from Factiva. The new set of newspapers is listed below. ",,,,,,,,,
+Atlanta Journal-Constitution,,,New York Times,,,Seattle Times,,,Arizona Republic
+Boston Herald,,,Palm Beach Post,,,St. Louis Post-Dispatch,,,Arkansas Democrat Gazette
+Dallas Morning News,,,Philadelphia Inquirer,,,St. Paul Pioneer Press,,,Denver Post
+Detroit Free Press,,,Providence Journal,,,Star Ledger,,,Times-Picayune
+Houston Chronicle,,,San Francisco Chronicle,,,Star Tribune,,,Wall Street Journal
+New York Post ,,,San Jose Mercury News,,,The Tennessean,,,Washington Post
