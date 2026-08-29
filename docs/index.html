@@ -277,6 +277,7 @@ fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
  document.getElementById('monthly').innerHTML=
   `<h2>한 달 전망 (검증된 규칙이 있을 때만)</h2><div class="${mc}" style="font-weight:700;font-size:1.05em">${mLabel}</div>
    <div class="note" style="margin-top:3px">${m.why}</div>
+   ${m.synth?`<div class="note" style="margin-top:6px;padding:8px;background:#161b22;border-radius:6px;border-left:3px solid #388bfd"><b>정직한 종합</b> (검증 계기 기계 조립 — 예측 아닌 판독): ${m.synth}</div>`:''}
    <div class="note dim">※ 전망이 "없음"인 것도 정보입니다 — 근거 없는 낙관/비관을 하지 않는다는 뜻입니다.</div>`;
 
  if(s.event_cards && s.event_cards.length){

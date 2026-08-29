@@ -627,6 +627,41 @@ else:
     monthly = {'stance': 'NONE', 'label': '무사건 — 판정 없음',
                'why': '사건 문턱(±2%/3일 ±5%) 미달. 칸별 계기는 상황 파악용.'}
 
+# ==== 사건일 정직한 종합 (47단계: 검증 계기 → 3축 서술. 판정 아님·판독 보조) ====
+if event:
+    try:
+        _mv_abs = ys['move'][move_d] if (move_d and ys.get('move')) else None
+        danger = []
+        if _mv_abs is not None and _mv_abs >= 120: danger.append(f'채권 발작(MOVE {_mv_abs:.0f})')
+        if standoff is not None and str(standoff).startswith('ON'): danger.append('재정 대치 스위치 ON')
+        if mc_pct is not None and (v is None or v < 28) and mc_pct >= 90: danger.append(f'저변동 하방 게이지 {mc_pct}')
+        if jcot_pct is not None and jpy5 is not None and jcot_pct <= 10 and jpy5 <= -3: danger.append('엔 캐리 청산 진행')
+        if c20_hold: danger.append(f'빅테크 실적 임박({len(earn7)}건) — 매수 보류 조건')
+        rec = []
+        if v is not None and v >= 28: rec.append(f'VIX {v:.0f} 항복 국면(#001 반등 84~94%)')
+        if c19_all: rec.append('카드19 3중 일치(2개월 +16.3%/91%)')
+        if c19_cap and earn7 == [] and not c19_all: rec.append('청정 항복(실적 무·P14형 +5.0%/81%)')
+        if ret1 < 0 and _mv_abs is not None and _mv_abs < 120 and (mv_lv or 0) < 80: rec.append(f'채권 무발작(MOVE {_mv_abs:.0f}) — 시스템 위험 아님')
+        if cu22v is not None and cu22v <= -3: rec.append(f'구리/금 {cu22v}% 재가격 완료')
+        if cyc_gap is not None and cyc_gap <= 0.25: rec.append(f'완화 사이클(Y2−EFFR {cyc_gap:+.2f})')
+        if kink_v is not None and standoff is not None and str(standoff).startswith('ON') and kink_v >= 0.2: rec.append(f'킹크 {kink_v:+.2f} 공포 절정(P12 +8.1%/95%)')
+        if ret1 < 0:
+            if c19_all: stance = '판정급 매수 국면(카드19) — P13 카운트 대상.'
+            elif v is not None and v >= 28: stance = '반등 우세(#001) — 단 국면 첫날이면 즉시 매수 금지.'
+            elif danger: stance = '경계 우세 — 위 경고의 소화를 확인하기 전 관망.'
+            elif len(rec) >= 2: stance = '회복 여지 우세 — 단 판정급 신호 미달, 확신 매수는 아님.'
+            elif rec: stance = '약한 회복 여지 — 관망.'
+            else: stance = '판독 근거 부족 — 관망.'
+        else:
+            stance = '상승 사건 — 원인 미상이면 카드18(무촉매 fake 44%·추격 금지) 우선, 실적·정책발이면 해당 칸 문법.'
+        monthly['synth'] = ('하락 연쇄 경고: ' + ('없음 — 공포에 동조할 근거 없음' if not danger else f'{len(danger)}건 ({", ".join(danger)})')
+                            + ' / 회복 근거: ' + (', '.join(rec) if rec else '없음')
+                            + (f' / 문맥: FOMC {fomc_flag}' if fomc_flag else '')
+                            + (f', 뉴스 톤 백분위 {round(sent_p)}' if sent_p is not None else '')
+                            + ' → 종합: ' + stance)
+    except Exception as e:
+        note(f'종합 서술 실패: {e}')
+
 # ============ 5. 출력·채점·푸시 ============
 status = {
  'updated_utc': datetime.utcnow().isoformat() + 'Z', 'date': today,
