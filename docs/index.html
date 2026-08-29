@@ -235,25 +235,25 @@ function trCard(c){
 fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
  document.getElementById('sub').textContent=`기준일 ${s.date} · 매 거래일 저녁(한국시간) 자동 갱신`;
 
- // 경계 계기 이름 수집
+ // 경계 계기 수집 — 게이지별 [이름 = 값 : 이유] 카드
  const hotG=[],warnG=[],obsG=[];
  Object.entries(s.panels).forEach(([k,p])=>p.g.forEach(g=>{
+   if(g.state!=='hot'&&g.state!=='warn')return;
    const pn=(PNAME[k]||[p.title])[0].split(' (')[0];
-   const lab=pn+' · '+tr(g.name)[0];
-   if(g.state==='hot'||g.state==='warn'){
-     if(OBSGRADE.has(g.name)) obsG.push(lab);
-     else if(g.state==='hot') hotG.push(lab);
-     else warnG.push(lab);
-   }
+   const item={pn,nm:tr(g.name)[0],val:S(g.val),why:(g.read||'').split(' — ')[0].split('. ')[0],hot:g.state==='hot'};
+   if(OBSGRADE.has(g.name)) obsG.push(item);
+   else if(g.state==='hot') hotG.push(item);
+   else warnG.push(item);
  }));
+ const bnLine=(it,grey)=>`<div style="margin:3px 0;${grey?'color:#8b949e':''}"><span style="color:${grey?'#8b949e':(it.hot?'#f85149':'#d29922')}">●</span> <b>${it.nm}</b> = ${it.val} <span style="color:#8b949e">[${it.pn}칸]</span> — ${it.why}</div>`;
  let vcls='up',vtxt='평온한 하루',vsub='큰 변동 없음. 위험 신호도 켜진 것이 없습니다.';
  const core=warnG.length+hotG.length;
  if(core>0){
    vcls='warn';vtxt=`평시 — 긴장 신호 ${core}개`;
-   vsub='긴장이 켜진 계기: <b>'+[...hotG,...warnG].join('</b>, <b>')+'</b>.';
+   vsub=`<div style="text-align:left;max-width:680px;margin:0 auto"><div style="color:#8b949e;margin-bottom:2px">긴장 신호 = 과거 급변 연구에서 검증된 판정급 계기가 경계 구간에 든 것 (값과 이유는 각 항목 참조, 자세한 설명은 아래 해당 칸):</div>${[...hotG,...warnG].map(it=>bnLine(it,false)).join('')}</div>`;
  }
  if(obsG.length>0){
-   vsub=(core>0?vsub+'<br>':'')+`<span style="color:#8b949e">참고 점등 ${obsG.length}개 (관찰·배경 등급 — 경보 아님): ${obsG.join(', ')}</span>`;
+   vsub=(core>0?vsub:'')+`<div style="text-align:left;max-width:680px;margin:4px auto 0"><div style="color:#8b949e;margin-bottom:2px">참고 점등 ${obsG.length}개 — 관찰 등급(통계 검증이 약해 경보로 쓰지 않는 배경 계기):</div>${obsG.map(it=>bnLine(it,true)).join('')}</div>`;
    if(core===0){vcls='up';vtxt='평온 — 판정급 신호 없음';}
  }
  if(s.vix>=28){vcls='warn';vtxt='공포 국면 (VIX 28 이상)';vsub='과거 이 국면의 급락은 한 달 내 반등한 경우가 84~94%였습니다 (단, 국면 첫날은 예외가 많음).';}

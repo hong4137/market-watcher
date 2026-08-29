@@ -311,6 +311,14 @@ c19_noise = bool(epu_burst or mv_burst)
 c19_cap = mom22 is not None and mom22 <= -5
 c19_sent = sent_p is not None and sent_p <= 50
 c19_all = c19_noise and c19_cap and c19_sent
+# FOMC 캘린더 자동 태깅 (46단계)
+try:
+    _fomc = {r['Date'] for r in load_csv(f'{D}/ext/fomc_dates.csv')}
+    _y_, _m_, _d_ = map(int, today.split('-'))
+    _prev = (date(_y_, _m_, _d_) - timedelta(days=1)).isoformat()
+    fomc_flag = '결정일 당일' if today in _fomc else ('결정일 익일' if _prev in _fomc else None)
+except Exception:
+    fomc_flag = None
 c19_str = ('폭발' if c19_noise else '소음무') + '·' + ('항복' if c19_cap else '가격무') + '·' + ('침울' if c19_sent else '톤무')
 epu_burst_val = max([x for x in (epu_lv, epu_dp) if x is not None], default=None)
 dix_last = dix_hist[-1] if dix_hist else None
@@ -863,6 +871,7 @@ if event:
             f"[IF F칸·관세] 카드15: RF 실적(과거 1년 내 타격→전면구제 ≤7일) 보유 시 타격 매수(+12.4%/100%), 무실적 관망 — 세션 수동 판독(P11)",
             f"[IF F칸·재정] 카드16: 대치형=시한부 매수(킹크 {kink_v}pp 병독) / 부양형=규모·확정·금리소화 3게이지",
             f"[IF G칸·무촉매 상승] 카드18: 뉴스 없는 급등이면 fake 우세(44%) — 추격 금지, 되돌림은 1개월 종결",
+            f"[문맥] 오늘은 FOMC {fomc_flag} — A칸(연준) 문법 우선 적용, 채권 무발작(MOVE<발작권)이면 과거 회복 우세(46단계 관찰)" if fomc_flag else "[문맥] FOMC 주간 아님",
             f"[전칸] 카드19 3중 일치: {c19_str} → {'매수 국면(2개월 +16.3%/91%, P13)' if c19_all else '미충족 — 관망'}",
             f"[체크포인트] 10거래일 뒤 사건일 종가 대비 음수면 fake 분류 확정 (대장 자동 채점)",
         ]
