@@ -275,6 +275,44 @@ t_last = sorted(tre)[-1] if tre else None
 epu_last = epu_hist[-1] if epu_hist else None
 epu_pct = pctile([x for _, x in epu_hist], epu_last[1]) if epu_hist else None
 epu_1y = pctile([x for _, x in epu_hist[-365:]], epu_last[1]) if epu_hist and len(epu_hist) >= 180 else epu_pct
+
+# ==== 45단계 신정의: 폭발 진입(EPU·MOVE) + 카드19 3중 일치 (등록: P13, 2026-08-27) ====
+def _burst_feats(vals, recent_k=14):
+    nn = len(vals)
+    if nn < 600: return None, None, False
+    ma22 = [sum(vals[i-21:i+1])/22 if i >= 21 else None for i in range(nn)]
+    def _pw(i, w, arr, x):
+        lo = max(0, i-w+1); win = [y for y in arr[lo:i+1] if y is not None]
+        return 100.0*sum(1 for y in win if y <= x)/len(win) if len(win) >= max(30, w//3) and x is not None else None
+    lp = [_pw(i, 504, ma22, ma22[i]) for i in range(nn)]
+    sd = [(sum((x-sum(vals[i-21:i+1])/22)**2 for x in vals[i-21:i+1])/22)**0.5 if i >= 21 else None for i in range(nn)]
+    dp = [_pw(i, 252, sd, sd[i]) if i >= 252 else None for i in range(nn)]
+    def _er(arr):
+        for i in range(max(1, nn-recent_k), nn):
+            if arr[i] is not None and arr[i-1] is not None and arr[i] >= 95 and arr[i-1] < 95: return True
+        return False
+    return lp[-1], dp[-1], (_er(lp) or _er(dp))
+epu_lv = epu_dp = mv_lv = mv_dp = sent_p = None; epu_burst = mv_burst = False
+try:
+    if epu_hist: epu_lv, epu_dp, epu_burst = _burst_feats([x for _, x in epu_hist])
+except Exception as e: note(f'EPU 폭발 계산 실패: {e}')
+try:
+    _mvf = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/move_full.csv')}
+    if ys.get('move'): _mvf.update(ys['move'])
+    mv_lv, mv_dp, mv_burst = _burst_feats([_mvf[k] for k in sorted(_mvf)], recent_k=10)
+except Exception as e: note(f'MOVE 폭발 계산 실패: {e}')
+try:
+    _sfh = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/sf_sentiment.csv')}
+    sent_p, _, _ = _burst_feats([_sfh[k] for k in sorted(_sfh)])
+except Exception as e: note(f'감성 계산 실패: {e}')
+_ndl_ = sorted(ndx)
+mom22 = 100*(ndx[_ndl_[-1]]/ndx[_ndl_[-23]]-1) if len(_ndl_) >= 23 else None
+c19_noise = bool(epu_burst or mv_burst)
+c19_cap = mom22 is not None and mom22 <= -5
+c19_sent = sent_p is not None and sent_p <= 50
+c19_all = c19_noise and c19_cap and c19_sent
+c19_str = ('폭발' if c19_noise else '소음무') + '·' + ('항복' if c19_cap else '가격무') + '·' + ('침울' if c19_sent else '톤무')
+epu_burst_val = max([x for x in (epu_lv, epu_dp) if x is not None], default=None)
 dix_last = dix_hist[-1] if dix_hist else None
 sr = svr_rel(sorted(svr)[-1]) if svr else None
 pc_last = sorted(pc)[-1] if pc else None
@@ -513,7 +551,8 @@ panels = {
  'C': {'title': 'C 지정학·충격 (78건)', 'grammar': '에너지·통화형=달러 용량계(상관 0.69)·유가 보조. 보건형=VIX 경로만. 방향 비대칭: 고조 달러 0.57 / 완화 방출 0.33(#080).',
    'g': [gauge('달러 당일 %', dxc1, '급등(+0.5↑)=고조 용량 — 하락은 무해(완화·방출 신호)', st(dxc1 is not None and dxc1 >= 0.5, missing=dxc1 is None)),
          gauge('WTI 당일 %', wtc1, '보조 용량계', st(wtc1 is not None and abs(wtc1) >= 3, missing=wtc1 is None)),
-         gauge('EPU 역사 백분위', epu_1y, f'최근 1년 내 위치 — 전 역사(1985~) {epu_pct}% 참고. 시대상수 주의(#015)', st(epu_1y is not None and epu_1y >= 90, missing=epu_1y is None))]},
+         gauge('EPU 폭발 게이지', epu_burst_val, f'수준p {epu_lv and round(epu_lv)}·산포p {epu_dp and round(epu_dp)} (2년/1년 이동창) — 95+ 진입=폭발. 단독 중립, 카드19 성분', st(epu_burst_val is not None and epu_burst_val >= 95, missing=epu_burst_val is None)),
+         gauge('카드19: 소음·톤·항복 3중', c19_str, f'EPU∪MOVE 폭발 {"ON" if c19_noise else "off"} / mom22 {("%+.1f%%" % mom22) if mom22 is not None else "—"} / 감성p {sent_p and round(sent_p)} — 3중 일치=매수 문법(1개월 +9.9%·2개월 +16.3%, 2018+ 11에피소드 91%). P13 카운트', st(c19_all, missing=mom22 is None))]},
  'D': {'title': 'D 신용·시스템 (5건)', 'grammar': '표본 5건 — 식 검증 불가. 봉인 관찰(32단계): 2020년대 신용 사건 5/5가 한 달 양수(정책 즉시 개입 시대), 항복 축은 VIX가 아니라 MOVE·OFR(SVB는 VIX 23에 MOVE 170), 저VIX 경고·10일 체크포인트 이식 불가.',
    'g': [gauge('MOVE', move_d and ys['move'][move_d], '채권 발작 온도계', st(move_d is not None and ys['move'][move_d] >= 120, missing=move_d is None)),
          gauge('MOVE 5일 변화', move_c5, '급등=시스템 경계', 'na' if move_c5 is None else 'ok'),
@@ -534,7 +573,7 @@ panels = {
    'g': [gauge('구리/금 22일 (카드8·15 병용, %)', cu22v, '큰 음수=정책 충격 재가격 완료(관세 타격 시 매수 축 — 반응함수 무관 생존)', 'na' if cu22v is None else 'ok'),
          gauge('재정 대치 스위치 (TGA 13주)', standoff, '한도형 대치의 기계 신호. ON이면 아래 킹크를 매일 판독(P12)', st(standoff is not None and str(standoff).startswith('ON'), missing=standoff is None)),
          gauge('국채 킹크 (4주−3개월, pp)', kink_v, '대치 스위치 ON에서 ≥+0.20 점등 = 디폴트 공포 가격 절정 = 이후 1개월 우호(+8.1%/95%, P12 카운트). 스위치 OFF면 무시', st(kink_v is not None and standoff is not None and str(standoff).startswith('ON') and kink_v >= 0.2, missing=kink_v is None)),
-         gauge('EPU 역사 백분위', epu_1y, f'C칸과 공유 — 수준보다 급변에 주목 (전 역사 {epu_pct}%)', 'na' if epu_1y is None else 'ok')]},
+         gauge('EPU 폭발 게이지', epu_burst_val, 'C칸과 공유 — 95+ 진입=폭발(카드19 성분)', 'na' if epu_burst_val is None else 'ok')]},
  'G': {'title': 'G 기술적·수급 (21건)', 'grammar': '카드18: 뉴스 없는 급등은 fake 우세(−19pp, 방향성 관찰) — 추격 금지. 무촉매 급등은 신고가권 전용 현상. 진원 감별: P/C 과열=모멘텀 / NSP 과밀=스퀴즈 / 숏감마=감마.',
    'g': [gauge('SVR 20일 상대', sr, '≤20 저공매도 / ≥80 숏 과밀(#049)', st(sr is not None and (sr <= 20 or sr >= 80), missing=sr is None)),
          gauge('Equity P/C', pc.get(pc_last), '≤0.55 과열 낙관(#066)', st(pc_last is not None and pc[pc_last] <= 0.55, missing=pc_last is None)),
@@ -702,6 +741,16 @@ try:
                     'fwd22_actual': '', 'pass': ''})
         note(f'P12 적립: 킹크 {kink_v:+.2f}')
         changed = True
+    # P13 적립 (카드19 — 소음·톤·항복 3중 일치, 등록 2026-08-27)
+    if c19_all and not _recent('P13_TRIPLE', 20):
+        yy0, mm0, dd0 = map(int, today.split('-'))
+        led.append({'date': today, 'event_ret': '', 'domain': '전칸 상시(P13)', 'card': 'P13_TRIPLE',
+                    'reading': f'폭발 EPU {epu_lv and round(epu_lv)}/{epu_dp and round(epu_dp)} · MOVE {mv_lv and round(mv_lv)}/{mv_dp and round(mv_dp)} · mom22 {mom22:+.1f}% · 감성p {sent_p and round(sent_p)}',
+                    'verdict': 'fwd22 양수 예측 — 3중 일치 매수 (합격선: 첫 4에피소드 중 3+)',
+                    'fwd22_due': (date(yy0, mm0, dd0) + timedelta(days=32)).isoformat(),
+                    'fwd22_actual': '', 'pass': ''})
+        note(f'P13 적립: {c19_str}')
+        changed = True
     # P9c 적립
     if jpy5 is not None and v is not None and jpy5 <= -3 and v >= 25 and not _recent('P9c_CARRY', 56):
         yy0, mm0, dd0 = map(int, today.split('-'))
@@ -814,6 +863,7 @@ if event:
             f"[IF F칸·관세] 카드15: RF 실적(과거 1년 내 타격→전면구제 ≤7일) 보유 시 타격 매수(+12.4%/100%), 무실적 관망 — 세션 수동 판독(P11)",
             f"[IF F칸·재정] 카드16: 대치형=시한부 매수(킹크 {kink_v}pp 병독) / 부양형=규모·확정·금리소화 3게이지",
             f"[IF G칸·무촉매 상승] 카드18: 뉴스 없는 급등이면 fake 우세(44%) — 추격 금지, 되돌림은 1개월 종결",
+            f"[전칸] 카드19 3중 일치: {c19_str} → {'매수 국면(2개월 +16.3%/91%, P13)' if c19_all else '미충족 — 관망'}",
             f"[체크포인트] 10거래일 뒤 사건일 종가 대비 음수면 fake 분류 확정 (대장 자동 채점)",
         ]
         led_p = f'{D}/forward_count_ledger.csv'

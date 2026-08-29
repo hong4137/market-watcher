@@ -115,4 +115,29 @@ try:
 except Exception as e:
     print(f'ofr_fsi 실패: {e}')
 
+# SF연준 일간 뉴스 감성 (45단계 카드19 성분)
+try:
+    import openpyxl
+    req = urllib.request.Request('https://www.frbsf.org/wp-content/uploads/news_sentiment_data.xlsx', headers=UA)
+    data = urllib.request.urlopen(req, timeout=120).read()
+    if len(data) < 10000:
+        raise Exception('본문 미달')
+    wb = openpyxl.load_workbook(io.BytesIO(data), data_only=True, read_only=True)
+    ws = None
+    for w_ in wb.worksheets:
+        if w_.title.lower().startswith('data'): ws = w_
+    ws = ws or wb.worksheets[0]
+    rows = []
+    for rr in ws.iter_rows(values_only=True):
+        try:
+            d0 = str(rr[0])[:10]; v0 = float(rr[1])
+            if len(d0) == 10 and d0[4] == '-': rows.append([d0, v0])
+        except Exception: pass
+    if len(rows) > 1000:
+        save('sf_sentiment', rows, ['Date', 'Close'])
+    else:
+        print('sf_sentiment: 행 부족', len(rows))
+except Exception as e:
+    print(f'sf_sentiment 실패: {e}')
+
 print('수집 완료')
