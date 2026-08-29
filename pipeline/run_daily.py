@@ -321,6 +321,18 @@ except Exception:
     fomc_flag = None
 c19_str = ('폭발' if c19_noise else '소음무') + '·' + ('항복' if c19_cap else '가격무') + '·' + ('침울' if c19_sent else '톤무')
 epu_burst_val = max([x for x in (epu_lv, epu_dp) if x is not None], default=None)
+
+# ==== 카드20: 실적 캘린더 필터 (P14, 등록 2026-08-29) ====
+try:
+    _earn_rows = load_csv(f'{D}/ext45/earnings_mag7.csv')
+    _y2, _m2, _d2 = map(int, today.split('-'))
+    _t0 = date(_y2, _m2, _d2)
+    earn7 = sorted({r['ticker'] for r in _earn_rows if _t0 < date(*map(int, r['date'].split('-'))) <= _t0 + timedelta(days=7)})
+except Exception as e:
+    earn7 = None; note(f'실적 캘린더 실패: {e}')
+mom22_prev = 100*(nv_prev := ndx[_ndl_[-2]], nv_prev/ndx[_ndl_[-24]]-1)[1] if len(_ndl_) >= 24 else None
+cap_entry = (mom22 is not None and mom22_prev is not None and mom22 <= -5 and mom22_prev > -5)
+c20_hold = c19_cap and earn7 is not None and len(earn7) > 0
 dix_last = dix_hist[-1] if dix_hist else None
 sr = svr_rel(sorted(svr)[-1]) if svr else None
 pc_last = sorted(pc)[-1] if pc else None
@@ -581,7 +593,8 @@ panels = {
    'g': [gauge('구리/금 22일 (카드8·15 병용, %)', cu22v, '큰 음수=정책 충격 재가격 완료(관세 타격 시 매수 축 — 반응함수 무관 생존)', 'na' if cu22v is None else 'ok'),
          gauge('재정 대치 스위치 (TGA 13주)', standoff, '한도형 대치의 기계 신호. ON이면 아래 킹크를 매일 판독(P12)', st(standoff is not None and str(standoff).startswith('ON'), missing=standoff is None)),
          gauge('국채 킹크 (4주−3개월, pp)', kink_v, '대치 스위치 ON에서 ≥+0.20 점등 = 디폴트 공포 가격 절정 = 이후 1개월 우호(+8.1%/95%, P12 카운트). 스위치 OFF면 무시', st(kink_v is not None and standoff is not None and str(standoff).startswith('ON') and kink_v >= 0.2, missing=kink_v is None)),
-         gauge('EPU 폭발 게이지', epu_burst_val, 'C칸과 공유 — 95+ 진입=폭발(카드19 성분)', 'na' if epu_burst_val is None else 'ok')]},
+         gauge('EPU 폭발 게이지', epu_burst_val, 'C칸과 공유 — 95+ 진입=폭발(카드19 성분)', 'na' if epu_burst_val is None else 'ok'),
+         gauge('카드20: 실적 캘린더 필터', ('보류: ' + '·'.join(earn7)) if (earn7 and c19_cap) else (f'임박 {len(earn7)}건' if earn7 else ('청정' if earn7 == [] else None)), f'7일 내 빅테크 실적 {earn7 if earn7 else "없음"} — 항복 상태에서 임박이면 항복 매수 보류(임박 −3.6% vs 청정 +5.0%, 46c: 열위는 상대적·2022 의존 명기). 항복+청정이면 P14 카운트', st(bool(c20_hold), missing=earn7 is None))]},
  'G': {'title': 'G 기술적·수급 (21건)', 'grammar': '카드18: 뉴스 없는 급등은 fake 우세(−19pp, 방향성 관찰) — 추격 금지. 무촉매 급등은 신고가권 전용 현상. 진원 감별: P/C 과열=모멘텀 / NSP 과밀=스퀴즈 / 숏감마=감마.',
    'g': [gauge('SVR 20일 상대', sr, '≤20 저공매도 / ≥80 숏 과밀(#049)', st(sr is not None and (sr <= 20 or sr >= 80), missing=sr is None)),
          gauge('Equity P/C', pc.get(pc_last), '≤0.55 과열 낙관(#066)', st(pc_last is not None and pc[pc_last] <= 0.55, missing=pc_last is None)),
@@ -759,6 +772,16 @@ try:
                     'fwd22_actual': '', 'pass': ''})
         note(f'P13 적립: {c19_str}')
         changed = True
+    # P14 적립 (카드20 — 항복 진입 × 실적 청정, 등록 2026-08-29)
+    if cap_entry and earn7 == [] and not _recent('P14_CAPCLEAN', 20):
+        yy0, mm0, dd0 = map(int, today.split('-'))
+        led.append({'date': today, 'event_ret': '', 'domain': '전칸 상시(P14)', 'card': 'P14_CAPCLEAN',
+                    'reading': f'항복 진입 mom22 {mom22:+.1f}% · 7일 내 빅테크 실적 0건',
+                    'verdict': 'fwd22 양수 예측 — 실적 청정 항복 매수 (합격선: 첫 5건 중 4+)',
+                    'fwd22_due': (date(yy0, mm0, dd0) + timedelta(days=32)).isoformat(),
+                    'fwd22_actual': '', 'pass': ''})
+        note(f'P14 적립: 항복 청정 {mom22:+.1f}%')
+        changed = True
     # P9c 적립
     if jpy5 is not None and v is not None and jpy5 <= -3 and v >= 25 and not _recent('P9c_CARRY', 56):
         yy0, mm0, dd0 = map(int, today.split('-'))
@@ -871,6 +894,7 @@ if event:
             f"[IF F칸·관세] 카드15: RF 실적(과거 1년 내 타격→전면구제 ≤7일) 보유 시 타격 매수(+12.4%/100%), 무실적 관망 — 세션 수동 판독(P11)",
             f"[IF F칸·재정] 카드16: 대치형=시한부 매수(킹크 {kink_v}pp 병독) / 부양형=규모·확정·금리소화 3게이지",
             f"[IF G칸·무촉매 상승] 카드18: 뉴스 없는 급등이면 fake 우세(44%) — 추격 금지, 되돌림은 1개월 종결",
+            f"[전칸] 카드20 실적 필터: 7일 내 빅테크 실적 {len(earn7) if earn7 is not None else '?'}건 → {'항복 매수 보류(리스크 이벤트 대기)' if c20_hold else ('청정 — 항복 매수 문법 유효' if (earn7 == [] and c19_cap) else '해당 없음(항복 아님)')}",
             f"[문맥] 오늘은 FOMC {fomc_flag} — A칸(연준) 문법 우선 적용, 채권 무발작(MOVE<발작권)이면 과거 회복 우세(46단계 관찰)" if fomc_flag else "[문맥] FOMC 주간 아님",
             f"[전칸] 카드19 3중 일치: {c19_str} → {'매수 국면(2개월 +16.3%/91%, P13)' if c19_all else '미충족 — 관망'}",
             f"[체크포인트] 10거래일 뒤 사건일 종가 대비 음수면 fake 분류 확정 (대장 자동 채점)",

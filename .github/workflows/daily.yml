@@ -15,13 +15,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install requests openpyxl
+      - run: pip install requests openpyxl yfinance
       - name: run pipeline
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           NTFY_TOPIC: ${{ vars.NTFY_TOPIC }}
         run: |
           python pipeline/collect_history.py || echo "ext collect 실패 - 계속"
+          python pipeline/collect_stage46.py || echo "earnings collect 실패 - 계속"
           python pipeline/run_daily.py
       - name: commit results (keepalive 겸용 — 60일 비활성 방지)
         run: |
