@@ -398,9 +398,13 @@ try:
     _kt = sorted(_tg)
     if len(_kt) > 14:
         _tg13 = 100 * (_tg[_kt[-1]] / _tg[_kt[-14]] - 1)
-        # 셧다운형: 예산 데드라인 9/30 ±30일 (등록서 정의 — CR 만료는 수동 판독 명기)
-        _mm, _dd = int(today[5:7]), int(today[8:10])
-        _budget_win = (_mm == 9) or (_mm == 10 and _dd <= 30) or (_mm == 8 and _dd >= 31)
+        # 셧다운형: 예산 데드라인(9/30·CR 만료) ±30일 (등록서 P12 정의). 9/30 이전 CR로 해소된 해는
+        # 실효 데드라인 = CR 만료일로 대체 — 수동 갱신 (정정 11호, 2026-10-04 사용자 승인)
+        FISCAL_DEADLINES = {2026: ['2026-12-11']}  # FY27 CR 9/2 서명 → 12/11까지 자금
+        _td = date.fromisoformat(today[:10])
+        _dls = [date.fromisoformat(s) for y in (_td.year - 1, _td.year)
+                for s in FISCAL_DEADLINES.get(y, [f'{y}-09-30'])]
+        _budget_win = any(abs((_td - d).days) <= 30 for d in _dls)
         if _tg13 <= -40:
             standoff = 'ON(한도형 — TGA 급감)'
         elif _budget_win:
