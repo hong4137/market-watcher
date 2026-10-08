@@ -25,6 +25,7 @@
  .gm-warn{background:#d29922}.gm-hot{background:#f85149}
  .grangelab{position:absolute;top:13px;font-size:.62em;color:#484f58}
  .gdetail{font-size:.72em;color:var(--dim);line-height:1.65;margin:2px 0 4px}
+ .gnow{font-size:.8em;color:#c9d1d9;line-height:1.6;margin:-6px 0 2px}
  .donut{transform:rotate(-90deg)}
  h1{font-size:1.1em;margin:0 0 2px;letter-spacing:.5px}
  .sub{font-size:.75em;color:var(--dim);margin-bottom:12px}
@@ -79,11 +80,11 @@
  <h2>최근 큰 변동의 한 달 성적표 (자동 채점)</h2>
  <table id="ledgerT"></table>
  <div class="note">급등·급락이 있던 날로부터 한 달(22거래일) 뒤 실제로 어떻게 됐는지 자동으로 채점합니다.</div>
-<div class="card" id="pBoard" style="display:none"><h2>검증 진행판 — 시장이 채점 중인 규칙들</h2><div class="note" style="margin:-2px 0 8px">사전에 등록한 규칙이 실제로 맞는지, 새 사건이 올 때마다 자동으로 적립·채점됩니다. 합격선 미달 시 그 규칙은 은퇴합니다.</div><div id="pBoardT"></div></div>
+<div class="card" id="pBoard" style="display:none"><h2>검증 중인 규칙 — 미리 적어 둔 규칙을 시장이 채점합니다</h2><div class="note" style="margin:-2px 0 8px">규칙을 먼저 적어 두고, 해당하는 날이 올 때마다 그 뒤 실제 결과로 자동 채점합니다. 합격선에 못 미치면 그 규칙은 버립니다.</div><div id="pBoardT"></div></div>
 </div>
 </div>
 
-<div class="legend">● 초록 평온 · ● 노랑 긴장 · ● 빨강 위험 · ● 회색 데이터 없음/휴면</div>
+<div class="legend">● 초록 평온 · ● 노랑 주의 · ● 빨강 위험 · ● 회색 데이터 없음·지금은 쓰지 않는 신호</div>
 <div id="panels"></div>
 
 <div class="card">
@@ -117,42 +118,39 @@ const GNAME={
  '10Y 당일 변화(pp)':['장기 금리가 오늘 얼마나 움직였나','성장·인플레 전망의 재조정'],
  '달러 당일 %':['달러 가치 변화','전쟁·위기 때 돈이 달러로 피신하면 급등'],
  'WTI 당일 %':['유가 변화','중동 등 지정학 긴장의 온도계'],
- 'EPU 폭발 게이지':['정책 소음 폭발 (EPU)','신문에서 정책 불확실성 기사가 차지하는 비중(EPU)의 22일 평균을 최근 2년 이동창 백분위로 잰 수준과 산포(1년 창) 중 큰 쪽. 95 이상 진입=폭발. 잣대가 시대와 함께 이동해 관세 시대에도 연 4~5회만 점등(45단계 재수립 — 수준 경보 의미론 폐기). 단독으론 중립, 아래 카드19의 성분'],
- '카드20: 실적 캘린더 필터':['카드20: 실적 캘린더 필터','앞으로 7일 안에 빅테크(MAG7+AVGO) 실적 발표가 있는지. 급락(항복) 중의 실적 발표는 구원이 아니라 \'하락 원인이 곧 판결받는 리스크 이벤트\' — 항복 상태에서 실적 임박이면 항복 매수를 보류(과거 임박 −3.6%/33% vs 청정 +5.0%/81%, 단 열위는 상대적·2022 표본 의존). 항복인데 실적이 없으면 \'청정 항복\' = 매수 문법 유효(P14 카운트). 항복 아닐 땐 정보 표시만'],
- '카드19: 소음·톤·항복 3중':['카드19: 소음·톤·항복 3중 일치','정책 소음 폭발(EPU 또는 MOVE 채권변동성) + 뉴스 톤 침울(SF연준 감성 2년 백분위 50 이하) + 가격 항복(22일 수익 −5% 이하) — 세 박자가 모두 맞으면 나쁜 뉴스가 지면·심리·가격에 전부 반영된 상태로, 이후 1개월 +9.9%(91%)·2개월 +16.3%(91%, 2018+ 11에피소드, 45o 전 관문 통과). 성분 하나라도 빠지면 무가치(무폭발 +1.4%, 톤 멀쩡 시 초기 낙폭). 감성 발표 시차 10일까지 무해. P13 사전등록 카운트 중'],
+ 'EPU 폭발 게이지':['정책 불확실성 기사량 (EPU)','신문 기사 중 정책 불확실성을 다룬 기사의 비중. 최근 2년과 비교해 기사량이 많거나 크게 출렁이면(95 이상) 켜집니다. 혼자서는 방향을 알려 주지 않습니다'],
+ '카드20: 실적 캘린더 필터':['빅테크 실적 발표 임박 여부','앞으로 7일 안에 빅테크(M7+브로드컴) 실적 발표가 있는지. 주가가 급락한 와중에 실적이 다가오면 과거 반등 성적이 나빴습니다(평균 −3.6%, 실적이 없을 때는 +5.0%)'],
+ '카드19: 소음·톤·항복 3중':['나쁜 소식 3중 일치 (뉴스·분위기·주가)','① 정책·채권 불안이 폭발하고 ② 뉴스 분위기가 침울하고 ③ 주가가 한 달 새 5% 넘게 빠진 — 세 가지가 동시에 맞는 날. 나쁜 소식이 다 반영된 상태라 과거엔 한 달 뒤 +9.9%, 두 달 뒤 +16.3%(2018년 이후 11번 중 10번 상승). 하나라도 빠지면 의미 없습니다'],
  'MOVE':['채권시장 공포 지수 (MOVE)','채권판 VIX. 120 이상이면 채권시장 발작'],
  'MOVE 5일 변화':['채권 공포의 일주일 변화','급등하면 시스템 경계'],
- 'smh_gap (SMH−NDX)':['반도체가 시장보다 얼마나 약한가','큰 음수면 반도체발 하락 — 급변의 원인 감별용'],
+ 'smh_gap (SMH−NDX)':['반도체가 시장보다 얼마나 약한가','큰 음수면 반도체발 하락 — 큰 변동의 원인을 가려낼 때 씀'],
  'SVR 20일 상대':['대형주 공매도 압력','20 이하면 공매도 적음, 80 이상이면 숏 과밀'],
  'Equity P/C':['개인 옵션 심리 (풋/콜)','0.55 이하면 과열 낙관, 1.0 이상이면 공포'],
- 'NSP 52주 백분위':['선물 순매도 포지션','80 이상이면 하락 베팅 과밀 — 단 휴면 상태 표시 시 무시'],
- '딜러 순포지션':['중개사(딜러) 포지션','음수 지속이면 시장 구조 불안정'],
- 'DIX':['다크풀 매집 지표','높을수록 큰손이 조용히 사는 중'],
+ 'NSP 52주 백분위':['선물 하락 베팅 쏠림','투기 세력의 나스닥 선물 순매도 비중(1년 중 백분위). 80 이상이면 하락 베팅 과밀'],
+ '딜러 순포지션':['딜러의 나스닥 선물 포지션','딜러(중개사)가 나스닥 선물을 순매수(+)·순매도(−)한 계약 수'],
+ 'DIX':['다크풀 매집 지표','장외 대량거래(다크풀)에서 매수 비중. 높을수록 큰손이 조용히 사는 중'],
  'GEX($B)':['옵션 딜러 감마','음수면 변동을 증폭시키는 시장 구조'],
- 'BEI 커브 (10Y−5Y 기대인플레, pp)':['인플레 제약 게이지','0 이하로 역전되면 연준이 굽힐 수 없는 국면 — 실적 사건에 최악(1개월 15%)'],
- 'BDC 상대강도 66일 (ARCC−SPX, %p)':['사모신용 체감 지표','상장 사모신용 회사들의 상대 성적. −8 이하면 사모신용 스트레스 진행 — 급락 원인 감별용'],
+ 'BEI 커브 (10Y−5Y 기대인플레, pp)':['물가 부담 게이지','10년 기대 물가에서 5년 기대 물가를 뺀 값(%p). 0 아래면 가까운 물가 걱정이 더 크다는 뜻 — 연준이 금리를 내려 주기 어려운 환경'],
+ 'BDC 상대강도 66일 (ARCC−SPX, %p)':['사모신용 체감 지표','상장 사모신용 회사들의 상대 성적. −8 이하면 사모신용 스트레스 진행 — 급락 원인을 가려낼 때 씀'],
  'CLO 메자닌 상대 22일 (JBBB−JAAA, %p)':['대출시장 하위등급 온도','큰 음수면 레버리지 대출 쪽 스트레스'],
- '엔 캐리 게이지 (USDJPY 5일 %)':['엔 캐리 청산 감지','큰 음수(엔 급등)=캐리 청산 진행. 공포 국면(VIX 25↑) 동반이면 역사적 매수 구간'],
- '엔 투기 포지션 52주 백분위':['엔 숏 쏠림','10 이하면 캐리 과밀 — 청산이 시작되면 커지는 조건(타이밍 아님)'],
- '은행 우선주 상대 22일 (PFF−LQD, %p)':['은행 자본 스트레스','−10 이하면 시스템급(2008형), 0 근처면 국지. 은행 사건 시 강도 판독'],
- 'NFCI 레버리지 서브지수':['레버리지 과열 배경','높으면 빚이 쌓인 취약 배경(참고용 — 타이밍 아님)'],
- '위험 2층: 장작(배경)×불씨(발화)':['위험 현황판','배경 취약성과 발화 신호의 분해 표시(참고용)'],
+ '엔 투기 포지션 52주 백분위':['엔화 하락 베팅 쏠림','투기 세력의 엔화 순매도 비중(1년 중 백분위). 10 이하면 하락 베팅 과밀'],
+ '은행 우선주 상대 22일 (PFF−LQD, %p)':['은행 자본 스트레스','−10 이하면 2008년형 시스템 위기, 0 근처면 국지적. 은행 사건이 났을 때 강도를 재는 계기'],
+ 'NFCI 레버리지 서브지수':['레버리지 과열 배경','높으면 빚이 쌓인 취약한 배경(참고용 — 시점 신호 아님)'],
+ '위험 2층: 장작(배경)×불씨(발화)':['위험 현황판','느리게 쌓이는 취약 요인(빚·신용)과 빠른 촉발 요인(급격한 가격 변화)을 나눠 센 집계판(참고용)'],
  '신용 스프레드 (BAA−AAA)':['회사채 신용 온도','낮은 수준에서 상승 전환하면 신용 사이클 초입 경계(참고)'],
- '하이일드 스프레드 22일 변화(pp)':['정크본드 스트레스 변화','급확대면 신용 재가격 진행'],
- 'OFR 신용 서브지수 22일 변화':['시스템 신용 스트레스 변화','+0.3 이상이며 시장이 평온하면 2007형 괴리 관찰'],
- 'Y2−EFFR 사이클 게이지(pp)':['금리 사이클 위치','+0.25 이하면 완화·종점(지표 사건 우호), 그 위면 긴축기(랠리도 fake)'],
- '구리/금 22일 변화(%)':['실물 재가격 게이지','큰 음수면 경기 타격이 이미 상품시장에 반영 — 침체공포·정책 사건 시 반등 우세'],
- '구리/금 22일 (카드8·15 병용, %)':['실물 재가격 게이지','큰 음수면 정책 충격이 이미 가격에 반영 — 관세 타격 시 매수 축'],
- '재정 대치 스위치 (TGA 13주)':['재정 대치 감지','재무부 곳간이 13주에 40% 이상 급감하면 부채한도 대치 중이라는 기계 신호'],
- '국채 킹크 (4주−3개월, pp)':['디폴트 공포 체온계','대치 중 +0.2 이상이면 공포가 가격에 다 반영된 절정 — 역사적으로 그 후 한 달 95% 상승'],
- '엔 캐리 게이지 (USDJPY 5일 %)':['엔 캐리 청산 감지','큰 음수=캐리 청산 진행. VIX 25 이상 동반이면 매수 구간'],
- 'Y2−EFFR 사이클 게이지(pp)':['금리 사이클 위치','+0.25 이하면 인상 사이클 종점·인하기(지표 사건에 우호), 그 위면 긴축기(경계)'],
- '구리/금 22일 변화(%)':['구리/금 비율 한 달 변화','큰 음수면 경기 둔화가 이미 상품시장에 반영됨 — 침체공포 사건 시 반등 우세'],
+ '하이일드 스프레드 22일 변화(pp)':['정크본드 스트레스 변화','급히 벌어지면 신용 위험이 다시 매겨지는 중'],
+ 'OFR 신용 서브지수 22일 변화':['시스템 신용 스트레스 변화','+0.3 이상인데 주가가 평온하면 2007년형 엇갈림 — 지켜볼 대상'],
+ '구리/금 22일 (카드8·15 병용, %)':['구리/금 비율 한 달 변화 (정책 충격용)','크게 음수면 관세 등 정책 충격이 이미 원자재 가격에 반영된 상태'],
+ '재정 대치 스위치 (TGA 13주)':['재정 대치 감지','재무부 곳간(TGA)이 13주에 40% 이상 급감하거나 예산 마감이 다가오면 켜지는 부채한도·예산 대치 신호'],
+ '국채 킹크 (4주−3개월, pp)':['디폴트 공포 체온계','4주 만기 국채 금리 − 3개월 만기(%p). 부채한도 대치 중 +0.2 이상이면 디폴트 공포가 가격에 다 반영된 절정'],
+ '엔 캐리 게이지 (USDJPY 5일 %)':['엔 캐리 청산 감지','달러 대비 엔화 값의 5일 변화(%). 크게 음수면 엔 급등 = 엔을 빌려 투자한 돈이 청산되는 중'],
+ 'Y2−EFFR 사이클 게이지(pp)':['금리 사이클 위치','2년 국채금리 − 실제 기준금리(%p). +0.25 이하면 인상이 끝났거나 인하기, 그 위면 아직 긴축기'],
+ '구리/금 22일 변화(%)':['구리/금 비율 한 달 변화','경기에 민감한 구리를 안전자산 금으로 나눈 값의 22거래일 변화(%). 크게 음수면 경기 둔화가 이미 원자재 가격에 반영된 상태'],
 };
 const PNAME={
  'REGIME':['지금 시장은 어떤 국면인가','급변이 없어도 매일 보는 기본 계기판'],
  'A':['연준·금리 (통화정책)','파월 발언, FOMC 등. 단기 금리가 놀라면 이 칸'],
- 'B1':['경제 지표 (물가·고용·성장)','CPI, 고용 등 발표일 서프라이즈. 내용보다 금리 사이클 위치가 한 달을 결정'],
+ 'B1':['경제 지표 (물가·고용·성장)','CPI, 고용 등 발표일 서프라이즈. 지표 내용보다 지금이 긴축기냐 완화기냐가 한 달 뒤를 좌우했습니다'],
  'B2':['침체 공포','\'경기가 꺾인다\'는 공포가 원인인 급변. 공포가 이미 가격에 반영됐는지가 관건'],
  'C':['전쟁·지정학·전염병','경제 밖에서 오는 충격. 달러와 유가가 온도계'],
  'D':['금융시스템 위기','은행 파산 등. 사례가 5건뿐이라 검증 불가 — 관찰만'],
@@ -172,24 +170,24 @@ const GMETA={
  '2Y 당일 변화(pp)':{lo:-0.2,hi:0.2,zones:[[-0.2,-0.1,'warn'],[-0.1,0.1,'ok'],[0.1,0.2,'warn']],ticks:[[-0.1,''],[0.1,'서프라이즈급']]},
  '10Y 당일 변화(pp)':{lo:-0.3,hi:0.3,zones:[[-0.3,-0.15,'warn'],[-0.15,0.15,'ok'],[0.15,0.3,'warn']],ticks:[]},
  'Y2−EFFR 사이클 게이지(pp)':{lo:-2,hi:2.3,zones:[[-2,0.25,'ok'],[0.25,2,'warn']],ticks:[[0.25,'긴축 경계']]},
- '구리/금 22일 변화(%)':{lo:-20,hi:20,zones:[[-20,-3,'ok'],[3,20,'warn']],ticks:[[-3,'재가격 완료권']]},
- '구리/금 22일 (카드8·15 병용, %)':{lo:-20,hi:20,zones:[[-20,-3,'ok'],[3,20,'warn']],ticks:[[-3,'재가격 완료권']]},
+ '구리/금 22일 변화(%)':{lo:-20,hi:20,zones:[[-20,-3,'ok'],[3,20,'warn']],ticks:[[-3,'반영 완료']]},
+ '구리/금 22일 (카드8·15 병용, %)':{lo:-20,hi:20,zones:[[-20,-3,'ok'],[3,20,'warn']],ticks:[[-3,'반영 완료']]},
  'MOVE':{lo:40,hi:200,zones:[[40,100,'ok'],[100,130,'warn'],[130,200,'hot']],ticks:[[71,'중앙값'],[120,'발작']]},
  'MOVE 5일 변화':{lo:-30,hi:35,zones:[[-30,10,'ok'],[10,30,'warn']],ticks:[]},
  '신용 스프레드 (BAA−AAA)':{lo:0.3,hi:3.5,zones:[[0.3,1.3,'ok'],[1.3,1.8,'warn'],[1.8,3.5,'hot']],ticks:[[0.85,'중앙값'],[1.3,'스트레스권']]},
  '하이일드 스프레드 22일 변화(pp)':{lo:-1,hi:1.5,zones:[[-1,0.4,'ok'],[0.4,1.5,'hot']],ticks:[[0.4,'급확대']]},
- 'OFR 신용 서브지수 22일 변화':{lo:-1,hi:1.5,zones:[[-1,0.3,'ok'],[0.3,1.5,'warn']],ticks:[[0.3,'괴리 관찰']]},
+ 'OFR 신용 서브지수 22일 변화':{lo:-1,hi:1.5,zones:[[-1,0.3,'ok'],[0.3,1.5,'warn']],ticks:[[0.3,'엇갈림 관찰']]},
  'BDC 상대강도 66일 (ARCC−SPX, %p)':{lo:-25,hi:15,zones:[[-25,-8,'hot'],[-8,-3,'warn'],[-3,10,'ok']],ticks:[[-8,'스트레스']]},
  'CLO 메자닌 상대 22일 (JBBB−JAAA, %p)':{lo:-6,hi:4,zones:[[-6,-1,'warn'],[-1,4,'ok']],ticks:[[-1,'경계']]},
- '엔 캐리 게이지 (USDJPY 5일 %)':{lo:-5,hi:5,zones:[[-5,-3,'warn'],[-3,5,'ok']],ticks:[[-3,'청산 진행(판독 개시)']]},
- '엔 투기 포지션 52주 백분위':{lo:0,hi:100,zones:[[0,10,'warn'],[10,100,'ok']],ticks:[[10,'과밀(배경 조건)']]},
+ '엔 캐리 게이지 (USDJPY 5일 %)':{lo:-5,hi:5,zones:[[-5,-3,'warn'],[-3,5,'ok']],ticks:[[-3,'청산 진행']]},
+ '엔 투기 포지션 52주 백분위':{lo:0,hi:100,zones:[[0,10,'warn'],[10,100,'ok']],ticks:[[10,'과밀']]},
  '은행 우선주 상대 22일 (PFF−LQD, %p)':{lo:-15,hi:5,zones:[[-15,-10,'hot'],[-10,-5,'warn'],[-5,5,'ok']],ticks:[[-5,'국지'],[-10,'시스템급']]},
  'NFCI 레버리지 서브지수':{lo:-1,hi:1.2,zones:[[-1,0.1,'ok'],[0.1,1,'warn']],ticks:[[0.1,'과열 배경']]},
  'smh_gap (SMH−NDX)':{lo:-6,hi:6,zones:[[-6,-3,'hot'],[-3,-2,'warn'],[-2,6,'ok']],ticks:[[-3,'반도체발']]},
- 'BEI 커브 (10Y−5Y 기대인플레, pp)':{lo:-0.55,hi:0.6,zones:[[-0.4,0,'hot'],[0,0.1,'warn'],[0.1,0.6,'ok']],ticks:[[0,'역전=제약']]},
- '국채 킹크 (4주−3개월, pp)':{lo:-0.8,hi:0.6,zones:[[-0.8,0.2,'ok'],[0.2,0.6,'warn']],ticks:[[0.2,'공포 절정(대치 중이면 매수 신호)']]},
+ 'BEI 커브 (10Y−5Y 기대인플레, pp)':{lo:-0.55,hi:0.6,zones:[[-0.4,0,'hot'],[0,0.1,'warn'],[0.1,0.6,'ok']],ticks:[[0,'역전']]},
+ '국채 킹크 (4주−3개월, pp)':{lo:-0.8,hi:0.6,zones:[[-0.8,0.2,'ok'],[0.2,0.6,'warn']],ticks:[[0.2,'공포 절정']]},
  'EPU 폭발 게이지':{lo:0,hi:100,zones:[[0,95,'ok'],[95,100,'warn']],ticks:[[95,'폭발']]},
- 'GEX($B)':{lo:-5,hi:15,zones:[[-5,0,'warn'],[0,15,'ok']],ticks:[[0,'숏감마 경계']]},
+ 'GEX($B)':{lo:-5,hi:15,zones:[[-5,0,'warn'],[0,15,'ok']],ticks:[[0,'변동 증폭']]},
  'SVR 20일 상대':{lo:0,hi:100,zones:[[0,20,'warn'],[20,80,'ok'],[80,100,'warn']],ticks:[[20,'저공매도'],[80,'과밀']]},
  'Equity P/C':{lo:0.3,hi:1.2,zones:[[0.3,0.55,'warn'],[0.55,1.2,'ok']],ticks:[[0.55,'과열 낙관']]},
  'NSP 52주 백분위':{lo:0,hi:100,zones:[[0,80,'ok'],[80,100,'warn']],ticks:[[80,'과밀']]},
@@ -215,6 +213,102 @@ function donut(val,max,color,label,sub){
 }
 
 
+// ===== 지금 상태를 사람 말로 — 계기마다 '값을 기준과 비교한 한 문장' =====
+// 연구 노트(문턱·장부 번호·검증 등급)는 각 칸의 '연구 원문 (전문가용)'에만 둔다.
+const sgn=(x,d=2)=>(x>0?'+':'')+Number(x).toFixed(d);
+const man=n=>{const k=Math.round(Math.abs(n)/1000);return k>=10?`${Math.floor(k/10)}만${k%10?' '+(k%10)+'천':''}`:`${k}천`;};
+const PLAIN={
+ 'VIX':(v)=>v>=35?'공포지수 35 이상 — 과거엔 열흘 안에 반드시 큰 변동이 왔습니다(11번 중 11번).'
+   :v>=28?'공포 국면입니다. 과거 이 국면의 하락은 한 달 뒤 84~94%가 반등했습니다(국면 첫날은 예외가 많음).'
+   :v>=20?'평소보다 다소 불안하지만 공포 국면(28)은 아닙니다.':'주식시장은 평온합니다.',
+ 'VIX 1년 백분위':(v)=>v>=90?'지난 1년과 비교해도 상위 10% 안의 불안 — 상대적 공포 국면입니다.'
+   :`지난 1년과 비교하면 ${v<50?'평온한':'불안한'} 편입니다(0~100 중 ${v}).`,
+ 'VIX 상대급변 백분위':(v)=>v>=95?'공포지수가 역사적으로 드문 속도로 뛰었습니다 — 무언가 터진 날입니다.':'공포지수의 움직임은 평소 범위입니다.',
+ '60일 고점 대비(%)':(v)=>v>-0.5?'최근 60일 고점 근처에 있습니다.'
+   :v>-5?`고점에서 ${(-v).toFixed(1)}% 내려와 있습니다 — 일상적인 범위.`
+   :v>-10?`고점에서 ${(-v).toFixed(1)}% 내려와 조정 문턱(−10%)에 다가가는 중입니다.`
+   :`고점에서 ${(-v).toFixed(1)}% 빠진 본격 조정 국면 — 깊을수록 투매가 나온 뒤인 경우가 많았습니다.`,
+ 'MOVE×커브 결합백분위 [탐사]':(v,st,s)=>st==='warn'?`주식은 평온한데 채권시장 불안은 1년 중 상위 ${Math.max(1,100-v)}% 수준입니다. 과거엔 이런 엇갈림 뒤 한 달이 약했습니다 — 아직 검증 중인 신호.`
+   :(s&&s.vix>=28)?'공포 국면에서는 이 신호를 쓰지 않습니다.':'채권시장 불안이 주식과 크게 엇갈리지 않습니다.',
+ '2Y 당일 변화(pp)':(v)=>Math.abs(v)>=0.1?`단기 금리가 하루에 ${sgn(v)}%p 움직였습니다 — 연준 관련 '깜짝 소식'급입니다.`:'단기 금리는 조용합니다.',
+ '2Y 5일 변화(pp)':(v)=>v>=0.1?`단기 금리가 일주일 새 ${sgn(v)}%p — 금리 인상(또는 인하 축소) 쪽으로 기대가 이동했습니다.`
+   :v<=-0.1?`단기 금리가 일주일 새 ${sgn(v)}%p — 금리 인하 쪽으로 기대가 조금 이동했습니다.`:'금리 기대에 큰 이동은 없습니다.',
+ 'Y2−EFFR 사이클 게이지(pp)':(v)=>v>0.25?`아직 긴축 쪽입니다 — 2년 국채금리가 실제 기준금리보다 ${v.toFixed(2)}%p 높아 시장은 추가 인상을 봅니다. 이런 때는 경제지표 호재로 오른 주가가 오래가지 못한 경우가 많았습니다.`
+   :`완화 쪽입니다 — 2년 국채금리가 기준금리와 비슷하거나 낮아 시장은 인상 종료·인하를 봅니다. 이런 때는 경제지표발 변동 뒤 한 달이 우호적이었습니다.`,
+ '구리/금 22일 변화(%)':(v)=>v<=-3?`구리가 금보다 한 달 새 ${(-v).toFixed(1)}% 더 떨어졌습니다 — 경기 둔화 걱정이 이미 가격에 반영돼, 침체 공포로 급락한 뒤엔 반등이 우세했습니다.`
+   :`구리/금 비율 한 달 ${sgn(v,1)}% — 경기 둔화가 원자재 가격에 반영된 상태는 아닙니다.`,
+ '10Y 당일 변화(pp)':(v)=>Math.abs(v)>=0.15?`장기 금리가 하루에 ${sgn(v)}%p — 성장·물가 전망이 다시 매겨지는 중입니다.`:'장기 금리는 조용합니다.',
+ '달러 당일 %':(v)=>v>=0.5?`달러가 하루에 ${sgn(v)}% 급등했습니다 — 위기 때 돈이 달러로 피신하는 모습입니다.`:`달러 ${sgn(v)}% — 피신 수요라 할 만큼은 아닙니다.`,
+ 'WTI 당일 %':(v)=>Math.abs(v)>=3?`유가가 하루에 ${sgn(v)}% 움직였습니다 — 중동 등 지정학 긴장을 확인할 때입니다.`:`유가 ${sgn(v)}% — 평소 범위입니다.`,
+ 'EPU 폭발 게이지':(v)=>v>=95?'정책 불확실성 기사가 최근 2년 중 가장 많거나 크게 출렁이는 쪽(상위 5% 안)입니다.'
+   :'정책 불확실성 기사는 평소 범위입니다.',
+ '카드19: 소음·톤·항복 3중':(v)=>{const s=String(v||''),n=['폭발','항복','침울'].filter(k=>s.includes(k)).length;
+   return n===3?'세 가지가 모두 맞았습니다 — 나쁜 소식이 다 반영된 상태로, 과거엔 한 달 뒤 +9.9%, 두 달 뒤 +16.3%(11번 중 10번 상승).'
+   :`세 조건 중 ${n}개만 맞습니다(${[s.includes('폭발')?'정책·채권 불안 폭발 ○':'정책·채권 불안 폭발 ×',s.includes('침울')?'뉴스 분위기 침울 ○':'뉴스 분위기 침울 ×',s.includes('항복')?'주가 한 달 −5% ○':'주가 한 달 −5% ×'].join(' · ')}) — 아직 해당 없습니다.`;},
+ 'MOVE':(v)=>v>=120?'채권시장 발작 수준입니다(120 이상).':v>=100?'채권시장 불안이 평소(중앙값 71)보다 높습니다 — 발작(120) 전 단계.':'채권시장은 평온합니다.',
+ 'MOVE 5일 변화':(v)=>v>=10?'채권 공포가 일주일 새 급히 올랐습니다 — 금융시스템 쪽 경계.':'채권 공포의 흐름은 안정적입니다.',
+ '신용 스프레드 (BAA−AAA)':(v)=>v>=1.3?'회사채 위험 프리미엄이 스트레스권입니다.'
+   :v>=0.85?'회사채 위험 프리미엄은 평소 수준입니다.'
+   :'회사채 위험 프리미엄이 낮습니다 — 신용시장은 평온합니다. 낮은 데서 오르기 시작하면 신용 사이클 초입으로 봅니다(참고).',
+ '하이일드 스프레드 22일 변화(pp)':(v)=>v>=0.4?'정크본드 금리 차가 한 달 새 급히 벌어졌습니다 — 신용 위험이 다시 매겨지는 중입니다.':'정크본드 시장은 안정적입니다.',
+ 'OFR 신용 서브지수 22일 변화':(v)=>v>=0.3?'금융시스템 신용 스트레스가 오르고 있습니다 — 주가가 평온한데 이러면 2007년형 엇갈림이라 지켜볼 대상입니다.':'금융시스템 신용 스트레스 변화는 작습니다.',
+ 'BDC 상대강도 66일 (ARCC−SPX, %p)':(v)=>v<=-8?'상장 사모신용 회사 주가가 시장보다 크게 뒤처졌습니다 — 사모신용 스트레스 진행 중.'
+   :v<=-3?`상장 사모신용 회사들이 석 달간 시장보다 ${(-v).toFixed(1)}%p 뒤처졌습니다 — 스트레스 문턱(−8)까지는 아닙니다.`:'사모신용 쪽 이상 징후는 없습니다.',
+ 'CLO 메자닌 상대 22일 (JBBB−JAAA, %p)':(v)=>v<=-1?'레버리지 대출 하위등급이 약합니다 — 사모신용 인접 스트레스.':'레버리지 대출 시장은 이상 없습니다.',
+ '위험 2층: 장작(배경)×불씨(발화)':(v)=>{const m=String(v||'').match(/(\d+)\/(\d+)\D+(\d+)\/(\d+)/);
+   return m?`쌓여 있는 취약 요인 ${m[2]}개 중 ${m[1]}개, 불을 붙일 촉발 요인 ${m[4]}개 중 ${m[3]}개가 켜져 있습니다. 참고용 — 이 집계로 급락을 미리 맞힌다는 근거는 아직 없습니다.`:'';},
+ '엔 캐리 게이지 (USDJPY 5일 %)':(v)=>v<=-3?'엔화가 급등했습니다 — 엔을 빌려 투자한 돈(캐리)이 청산되는 중. 공포 국면(공포지수 25 이상)과 겹치면 과거엔 석 달 뒤 대부분 올랐습니다.':'엔 캐리 청산 조짐은 없습니다.',
+ '엔 투기 포지션 52주 백분위':(v)=>v<=10?'엔화 하락 베팅이 1년 중 극단으로 쏠려 있습니다 — 청산이 시작되면 충격이 커지는 조건입니다(시점 신호는 아님).':'엔화 하락 베팅 쏠림은 위험 수준이 아닙니다.',
+ '은행 우선주 상대 22일 (PFF−LQD, %p)':(v)=>v<=-10?'은행 자본 스트레스가 2008년형 시스템 위기 수준입니다.':v<=-5?'은행 자본 스트레스 — 국지적 사건 수준입니다.':'은행 자본 쪽은 이상 없습니다(은행 사건이 났을 때 강도를 재는 계기).',
+ 'NFCI 레버리지 서브지수':(v)=>v>=0.1?'빚이 쌓인 취약한 배경입니다(느슨한 신용 + 과잉 레버리지). 과거 이런 배경의 석 달은 평소보다 약했지만 우연과 구별될 만큼은 아니어서 참고용입니다.':'레버리지 과열 배경은 아닙니다.',
+ 'smh_gap (SMH−NDX)':(v)=>v<=-3?'반도체가 시장보다 크게 약합니다 — 오늘 하락은 반도체발입니다.':'반도체와 시장 사이에 큰 차이는 없습니다.',
+ 'BEI 커브 (10Y−5Y 기대인플레, pp)':(v)=>v<=0?'가까운 몇 년의 물가 걱정이 먼 미래보다 큽니다 — 연준이 금리를 내려 주기 어려운 환경이라, 이럴 때 실적 발표 뒤 한 달 성적이 가장 나빴습니다.'
+   :v<0.1?'물가 부담이 경계선 근처입니다.':'물가 부담에 따른 제약은 없습니다(이 범위에선 판단에 쓰지 않습니다).',
+ '카드20: 실적 캘린더 필터':(v)=>{const s=String(v||'');
+   return s==='청정'?'앞으로 7일 안에 빅테크 실적 발표가 없습니다.'
+   :s.startsWith('보류')?`주가가 급락한 와중에 빅테크 실적(${s.replace(/^보류:\s*/,'')})이 다가옵니다 — 과거 이런 때 반등을 노린 매수는 성적이 나빴습니다.`
+   :s.startsWith('임박')?`앞으로 7일 안에 빅테크 실적 발표 ${s.replace(/\D/g,'')}건 — 급락 중이라면 실적이 하락의 판결이 되는 위험 이벤트입니다.`:'';},
+ '구리/금 22일 (카드8·15 병용, %)':(v)=>v<=-3?'정책 충격이 이미 원자재 가격에 반영됐습니다 — 관세 충격으로 급락한 뒤엔 반등 쪽이 우세했습니다.':'정책 충격이 원자재 가격에 반영된 흔적은 없습니다.',
+ '재정 대치 스위치 (TGA 13주)':(v)=>String(v||'').startsWith('ON')?`재정 대치 중입니다${String(v).replace(/^ON/,'')} — 아래 '디폴트 공포 체온계'를 매일 봅니다.`:'부채한도·예산 대치 신호는 없습니다.',
+ '국채 킹크 (4주−3개월, pp)':(v,st)=>st==='warn'?'재정 대치 중 디폴트 공포가 가격에 절정으로 반영됐습니다 — 과거 그 뒤 한 달 95% 상승.':'재정 대치 중일 때만 보는 계기 — 지금은 해당 없습니다.',
+ 'SVR 20일 상대':(v)=>v>=80?`공매도 비중이 최근 기준 상위권(100 중 ${v})입니다 — 하락 베팅이 몰려 있습니다.`:v<=20?'공매도가 드뭅니다 — 낙관이 쏠려 있습니다.':'공매도 비중은 평소 수준입니다.',
+ 'Equity P/C':(v)=>v<=0.55?'개인 투자자들이 콜옵션(상승 베팅)에 쏠렸습니다 — 과열 낙관.':v>=1?'풋옵션(하락 대비)이 많습니다 — 공포.':'개인 옵션 심리는 중립입니다.',
+ 'NSP 52주 백분위':(v,st)=>st==='warn'?'투기 세력의 선물 하락 베팅이 1년 중 상위권으로 몰렸습니다 — 급반등(숏 커버)의 연료가 됩니다.'
+   :v>=80?'하락 베팅이 몰렸지만 딜러가 순매도 중이라 지금은 이 신호를 쓰지 않습니다.':'선물 하락 베팅 쏠림은 평소 수준입니다.',
+ '딜러 순포지션':(v)=>v<0?`딜러들이 나스닥 선물을 약 ${man(v)} 계약 순매도 중입니다 — 시장 구조가 불안정한 쪽. 이 상태에선 바로 위 '선물 하락 베팅 쏠림' 신호를 쓰지 않습니다.`:'딜러가 순매수 쪽입니다 — 안정적인 구조.',
+ 'DIX':(v)=>v>=0.45?'다크풀(장외 대량거래)의 매수 비중이 높습니다 — 큰손이 조용히 사는 쪽입니다.':'다크풀 매수 비중은 평소 수준입니다.',
+ 'GEX($B)':(v)=>v<0?'옵션 딜러가 변동을 키우는 위치(숏감마)에 있습니다.':'옵션 딜러가 변동을 눌러 주는 위치에 있습니다.',
+};
+function plain(g,s){
+ const f=PLAIN[g.name]; if(!f||g.val===null||g.val===undefined||g.val==='') return g.state==='na'?'오늘은 데이터가 없습니다.':'';
+ const v=typeof g.val==='number'?g.val:(isNaN(parseFloat(g.val))||/[가-힣A-Z]/.test(String(g.val))?g.val:parseFloat(g.val));
+ try{return f(v,g.state,s)||'';}catch(e){return '';}
+}
+// 값 표시 — 문자열 값은 사람 말로
+function showVal(g){
+ const s=String(g.val??'');
+ if(g.name==='카드19: 소음·톤·항복 3중') return `3개 중 ${['폭발','항복','침울'].filter(k=>s.includes(k)).length}개`;
+ if(g.name==='카드20: 실적 캘린더 필터') return s==='청정'?'없음':s.startsWith('보류')?'임박(급락 중)':s.startsWith('임박')?s.replace('임박','')+' 예정':S(g.val);
+ if(g.name==='재정 대치 스위치 (TGA 13주)') return s.startsWith('ON')?'켜짐':s==='OFF'?'꺼짐':S(g.val);
+ if(g.name==='위험 2층: 장작(배경)×불씨(발화)') return s.replace('장작','취약').replace('불씨','촉발');
+ if(g.name==='EPU 폭발 게이지'&&typeof g.val==='number') return Math.round(g.val);
+ if(g.name==='DIX'&&typeof g.val==='number') return g.val.toFixed(2);
+ return S(g.val);
+}
+// 사건일 문장(종합·상황별 판독)에 남는 연구 용어를 걷어낸다
+function plainify(t){
+ return String(t||'')
+  .replace(/\s*\((?:#|VER\s*#)\d+[^)]*\)/g,'').replace(/VER\s*#\d+:?\s*/g,'').replace(/#\d+\s*/g,'')
+  .replace(/[,·]?\s*P\d+[a-z]?\s*(?:사전등록\s*)?(?:카운트(?:\s*대상|\s*중)?|형)/g,'')
+  .replace(/카드19 3중 일치/g,'나쁜 소식 3중 일치').replace(/카드20 실적 필터/g,'빅테크 실적 임박 점검').replace(/카드18/g,'뉴스 없는 급등 규칙')
+  .replace(/판정급 매수 국면/g,'검증된 반등 신호가 켜진 국면').replace(/매수 문법 유효/g,'과거 반등 패턴 해당')
+  .replace(/항복 매수 보류/g,'투매 뒤 반등을 노리기엔 이름').replace(/청정 항복/g,'실적 일정 없는 투매')
+  .replace(/판정급 신호 미달/g,'검증된 신호는 없음').replace(/확신 매수는 아님/g,'확신할 근거는 아님').replace(/즉시 매수 금지/g,'서두르지 않음')
+  .replace(/항복/g,'투매').replace(/fake/g,'오래 못 감').replace(/저변동 하방 게이지/g,'채권시장 스트레스 게이지')
+  .replace(/킹크/g,'디폴트 공포 체온계').replace(/Y2−EFFR/g,'금리 사이클').replace(/MOVE/g,'채권 공포지수').replace(/VIX/g,'공포지수')
+  .replace(/\s{2,}/g,' ');
+}
+
 function trCard(c){
  // 카드 문안 일반어 치환
  return c
@@ -232,6 +326,7 @@ function trCard(c){
   .replace('[IF G칸·무촉매 상승] 카드18',"[뉴스 없는 급등이면] 추격 금지")
   .replace('[체크포인트]','[10일 뒤 확인]');
 }
+const trCardP=c=>plainify(trCard(c));
 
 fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
  document.getElementById('sub').textContent=`기준일 ${s.date} · 매 거래일 저녁(한국시간) 자동 갱신`;
@@ -241,21 +336,21 @@ fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
  Object.entries(s.panels).forEach(([k,p])=>p.g.forEach(g=>{
    if(g.state!=='hot'&&g.state!=='warn')return;
    const pn=(PNAME[k]||[p.title])[0].split(' (')[0];
-   const item={pn,nm:tr(g.name)[0],val:S(g.val),why:(g.read||'').split(' — ')[0].split('. ')[0],hot:g.state==='hot'};
+   const item={pn,nm:tr(g.name)[0],val:showVal(g),why:plain(g,s)||tr(g.name)[1]||'',hot:g.state==='hot'};
    if(OBSGRADE.has(g.name)) obsG.push(item);
    else if(g.state==='hot') hotG.push(item);
    else warnG.push(item);
  }));
- const bnLine=(it,grey)=>`<div style="margin:3px 0;${grey?'color:#8b949e':''}"><span style="color:${grey?'#8b949e':(it.hot?'#f85149':'#d29922')}">●</span> <b>${it.nm}</b> = ${it.val} <span style="color:#8b949e">[${it.pn}칸]</span> — ${it.why}</div>`;
+ const bnLine=(it,grey)=>`<div style="margin:3px 0;${grey?'color:#8b949e':''}"><span style="color:${grey?'#8b949e':(it.hot?'#f85149':'#d29922')}">●</span> <b>${it.nm}</b> <span style="color:#8b949e">${it.val} · ${it.pn}</span><span style="display:block;margin:1px 0 6px 14px">${it.why}</span></div>`;
  let vcls='up',vtxt='평온한 하루',vsub='큰 변동 없음. 위험 신호도 켜진 것이 없습니다.';
  const core=warnG.length+hotG.length;
  if(core>0){
-   vcls='warn';vtxt=`평시 — 긴장 신호 ${core}개`;
-   vsub=`<div style="text-align:left;max-width:680px;margin:0 auto"><div style="color:#8b949e;margin-bottom:2px">긴장 신호 = 과거 급변 연구에서 검증된 판정급 계기가 경계 구간에 든 것 (값과 이유는 각 항목 참조, 자세한 설명은 아래 해당 칸):</div>${[...hotG,...warnG].map(it=>bnLine(it,false)).join('')}</div>`;
+   vcls='warn';vtxt=`평시 — 주의 신호 ${core}개`;
+   vsub=`<div style="text-align:left;max-width:680px;margin:0 auto"><div style="color:#8b949e;margin-bottom:2px">검증된 신호 ${core}개가 '주의' 구간에 있습니다. 당장 큰 변동이 왔다는 뜻은 아닙니다.</div>${[...hotG,...warnG].map(it=>bnLine(it,false)).join('')}</div>`;
  }
  if(obsG.length>0){
-   vsub=(core>0?vsub:'')+`<div style="text-align:left;max-width:680px;margin:4px auto 0"><div style="color:#8b949e;margin-bottom:2px">참고 점등 ${obsG.length}개 — 관찰 등급(통계 검증이 약해 경보로 쓰지 않는 배경 계기):</div>${obsG.map(it=>bnLine(it,true)).join('')}</div>`;
-   if(core===0){vcls='up';vtxt='평온 — 판정급 신호 없음';}
+   vsub=(core>0?vsub:'')+`<div style="text-align:left;max-width:680px;margin:4px auto 0"><div style="color:#8b949e;margin-bottom:2px">참고 신호 ${obsG.length}개 — 통계 검증이 약해 경보로는 쓰지 않고 배경만 보여 주는 신호:</div>${obsG.map(it=>bnLine(it,true)).join('')}</div>`;
+   if(core===0){vcls='up';vtxt='평온 — 검증된 주의 신호 없음';}
  }
  if(s.vix>=28){vcls='warn';vtxt='공포 국면 (VIX 28 이상)';vsub='과거 이 국면의 급락은 한 달 내 반등한 경우가 84~94%였습니다 (단, 국면 첫날은 예외가 많음).';}
  if(s.vix>=35){vcls='down';vtxt='폭풍 — VIX 35 이상';vsub='과거 이 수준에서는 열흘 안에 반드시 큰 변동이 왔습니다 (11번 중 11번).';}
@@ -273,16 +368,21 @@ fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
    <div class="dim" style="font-size:.68em;margin-top:-4px">28 공포 · 35 폭풍</div></div></div>`;
 
  const m=s.monthly, mc={BOUNCE:'up',NO_CALL:'warn',NO_ASSET:'warn',NONE:'dim'}[m.stance]||'dim';
+ const mWhy={BOUNCE:'공포지수 28 이상에서 나온 하락입니다. 과거 이런 때 한 달 뒤 84~94%가 반등했습니다'+(/첫날/.test(m.why||'')?' — 단 공포 국면 첫날은 68%라 서두르지 않습니다.':'.'),
+   NO_CALL:'공포지수가 낮은 상태에서 나온 하락이라, 한 달 뒤를 말해 줄 검증된 규칙이 없습니다. 방향을 주장하지 않습니다.',
+   NO_ASSET:'상승 쪽 큰 변동의 한 달 뒤를 맞힐 검증된 규칙은 아직 없습니다.',
+   NONE:'오늘은 큰 변동(하루 ±2% 또는 3일 ±5%)이 없어 한 달 전망을 내지 않습니다. 아래 계기들은 상황 파악용입니다.'}[m.stance]||m.why;
  const mLabel={BOUNCE:'반등 우세',NO_CALL:'판정 불가 — 근거 규칙 없음',NO_ASSET:'상승 급변 — 전망 규칙 없음',NONE:'큰 변동 없음 — 전망할 것 없음'}[m.stance]||m.label;
  document.getElementById('monthly').innerHTML=
   `<h2>한 달 전망 (검증된 규칙이 있을 때만)</h2><div class="${mc}" style="font-weight:700;font-size:1.05em">${mLabel}</div>
-   <div class="note" style="margin-top:3px">${m.why}</div>
-   ${m.synth?`<div class="note" style="margin-top:6px;padding:8px;background:#161b22;border-radius:6px;border-left:3px solid #388bfd"><b>정직한 종합</b> (검증 계기 기계 조립 — 예측 아닌 판독): ${m.synth}</div>`:''}
+   <div class="note" style="margin-top:3px">${mWhy}</div>
+   ${m.synth?`<div class="note" style="margin-top:6px;padding:8px;background:#161b22;border-radius:6px;border-left:3px solid #388bfd"><b>종합</b> (검증된 신호를 기계적으로 묶은 것 — 예측 아님): ${plainify(m.synth)}</div>`:''}
+   <details><summary>연구 원문 (전문가용)</summary><div class="note">${m.why}${m.synth?'<br>'+m.synth:''}</div></details>
    <div class="note dim">※ 전망이 "없음"인 것도 정보입니다 — 근거 없는 낙관/비관을 하지 않는다는 뜻입니다.</div>`;
 
  if(s.event_cards && s.event_cards.length){
    document.getElementById('cardsPanel').style.display='block';
-   document.getElementById('cardsList').innerHTML=s.event_cards.map(c=>'· '+trCard(c).replace(/\[(.*?)\]/,'<b>[$1]</b>')).join('<br>');
+   document.getElementById('cardsList').innerHTML=s.event_cards.map(c=>'· '+trCardP(c).replace(/\[(.*?)\]/,'<b>[$1]</b>')).join('<br>');
  }
 
  const order=['REGIME','A','B','C','D','E','F','G'];
@@ -293,15 +393,15 @@ fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
   const lit=p.g.filter(g=>g.state==='hot'||g.state==='warn');
   const wide=window.innerWidth>980; const openAttr=(wide||anyHot||anyWarn||k==='REGIME')?' open':'';
   return `<div class="card" ${anyHot?'style="border-color:#f85149"':anyWarn?'style="border-color:#d2992288"':''}>
-   <details${openAttr}><summary style="font-size:1em;color:inherit"><b>${pn[0]}</b>${anyHot?' <span class="tag t-hot">위험</span>':''}${lit.length?` <span class="dim" style="font-size:.8em">— 점등 ${lit.length}개: ${lit.map(g=>tr(g.name)[0]).join(', ')}</span>`:' <span class="dim" style="font-size:.8em">— 이상 없음</span>'}</summary>
+   <details${openAttr}><summary style="font-size:1em;color:inherit"><b>${pn[0]}</b>${anyHot?' <span class="tag t-hot">위험</span>':''}${lit.length?` <span class="dim" style="font-size:.8em">— 켜진 신호 ${lit.length}개: ${lit.map(g=>tr(g.name)[0]).join(', ')}</span>`:' <span class="dim" style="font-size:.8em">— 이상 없음</span>'}</summary>
    <div class="note" style="margin:4px 0 8px">${pn[1]}</div>
    ${p.g.map(g=>{const t=tr(g.name);return `<div class="grow" style="display:block;border-bottom:1px solid #21262d;padding:9px 0">
      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
        <div class="gname">${t[0]}</div>
-       <div class="gval">${S(g.val)}<span class="dot d-${g.state}"></span></div></div>
+       <div class="gval">${showVal(g)}<span class="dot d-${g.state}"></span></div></div>
      <div class="gdetail">${t[1]||''}</div>
      ${gbar(g.name,g.val,g.state)}
-     <div class="gdetail" style="color:#6e7681">${g.read}</div></div>`}).join('')}
+     ${(t=>t?`<div class="gnow ${g.state==='hot'?'down':g.state==='warn'?'warn':''}">${t}</div>`:'')(plain(g,s))}</div>`}).join('')}
    <details><summary>연구 원문 (전문가용)</summary><div class="note">${p.title} — ${p.grammar}<br>${p.g.map(g=>g.name+': '+g.read).join(' / ')}</div></details>
    </details>
   </div>`;
@@ -326,18 +426,28 @@ fetch('data/forward_count_ledger.csv?t='+Date.now()).then(r=>r.text()).then(t=>{
   +uniq.map(c=>{
     const f=c[7]||''; const done=f!=='';
     const cls=!done?'dim':(parseFloat(f)>=0?'up':'down');
-    return `<tr><td>${c[0]}</td><td class="${parseFloat(c[1])>=0?'up':'down'}">${parseFloat(c[1])>0?'+':''}${c[1]}%</td><td class="dim">${c[6]||''}</td><td class="${cls}">${done?(parseFloat(f)>0?'+':'')+f+'%':'채점 대기'}</td></tr>`;
+    return `<tr><td>${c[0]}</td><td class="${parseFloat(c[1])>=0?'up':'down'}">${parseFloat(c[1])>0?'+':''}${parseFloat(c[1]).toFixed(2)}%</td><td class="dim">${c[6]||''}</td><td class="${cls}">${done?(parseFloat(f)>0?'+':'')+f+'%':'채점 대기'}</td></tr>`;
   }).join('');
  // ── 검증 진행판 (P 시리즈 현황)
- const PMETA={'P1_L2p':['P1 저변동 하방 게이지','채점 15건 대기'],'P2_L1':['P2 항복 식별','80 이상 발동 시 카운트'],'P3_L1p':['P3 회복 서열','15건 적립'],'P5_R1_후보':['P5 매파 상승 되돌림','태깅 후 판정'],'P8_OBS20':['P8 두 달째 역전(긴축기)','합격선: 첫 10건 중 6+'],'P9a_G':['P9a 굳은 장작 위 불씨','첫 5건 중 2+ (이력 축적 중)'],'P9c_CARRY':['P9c 엔 캐리 항복 매수','첫 8건 중 6+'],'P12_KINK':['P12 재정 킹크','첫 4건 중 3+'],'P13_TRIPLE':['P13 카드19 3중 일치 매수','첫 4건 중 3+'],'P14_CAPCLEAN':['P14 실적 청정 항복 매수','첫 5건 중 4+']};
+ const PMETA={
+  'P1_L2p':['주식은 평온한데 채권시장이 불안할 때 한 달 뒤가 약했나','15번 쌓이면 판정'],
+  'P2_L1':['공포지수와 정책 불안이 동시에 극단일 때가 바닥이었나','해당하는 날마다 채점'],
+  'P3_L1p':['주식 공포가 채권 공포보다 클수록 회복이 빨랐나','15번 쌓이면 순서를 채점'],
+  'P5_R1_후보':['연준 매파 소식 속 급등은 한 달 안에 되돌려지나','원인을 확인한 뒤 채점'],
+  'P8_OBS20':['긴축기에 경제지표로 오른 랠리는 두 달째에 꺾이나','첫 10번 중 6번 이상 맞아야 합격'],
+  'P9a_G':['취약 요인이 오래 쌓인 뒤 촉발 요인이 켜지면 한 달 뒤가 나빴나','첫 5번 중 2번 이상'],
+  'P9c_CARRY':['엔 캐리 청산 + 공포 국면이 겹치면 석 달 뒤 올랐나','첫 8번 중 6번 이상'],
+  'P12_KINK':['부채한도 대치 중 디폴트 공포가 절정일 때 한 달 뒤 올랐나','첫 4번 중 3번 이상'],
+  'P13_TRIPLE':['나쁜 뉴스·침울한 분위기·주가 급락이 겹친 날, 한 달 뒤 올랐나','첫 4번 중 3번 이상'],
+  'P14_CAPCLEAN':['빅테크 실적 일정 없이 투매가 시작된 날, 한 달 뒤 올랐나','첫 5번 중 4번 이상']};
  const agg={};
- rows.forEach(c=>{ const k=c[3]; if(!PMETA[k])return; if(!agg[k])agg[k]={n:0,done:0,pass:0}; agg[k].n++; if(c[7]!=='')agg[k].done++; if(c[8]==='Y')agg[k].pass++; });
+ rows.forEach(c=>{ const k=c[3]; if(!PMETA[k]||/비대상/.test(c[5]||''))return; /* 조건 미달로 기록만 된 날은 세지 않는다 */ if(!agg[k])agg[k]={n:0,done:0,pass:0}; agg[k].n++; if(c[7]!=='')agg[k].done++; if(c[8]==='Y')agg[k].pass++; });
  const pk=Object.keys(PMETA).filter(k=>true);
  const pEl=document.getElementById('pBoard');
  if(pEl){ pEl.style.display='block';
   document.getElementById('pBoardT').innerHTML=pk.map(k=>{
    const a=agg[k]||{n:0,done:0,pass:0}; const m=PMETA[k];
-   const st=a.n===0?'<span class="dim">대기 — 조건 발생 시 자동 적립</span>':`적립 ${a.n} · 채점 ${a.done} · 적중 ${a.pass}`;
+   const st=a.n===0?'<span class="dim">아직 해당 사례 없음</span>':`발생 ${a.n}번 · 채점 끝 ${a.done} · 맞힘 ${a.pass}`;
    return `<div class="grow"><div style="flex:1"><div class="gname">${m[0]}</div><div class="gread">${m[1]}</div></div><div style="font-size:.85em">${st}</div></div>`;
   }).join('');
  }
