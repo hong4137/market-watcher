@@ -6,7 +6,7 @@ NDX 감시 파이프라인 v0.2 — 칸별 종합 상황판
 펼쳐놓고 사람이 종합 판단하는 상황판. 예측식이 있는 칸은 판정을, 없는 칸은 계기와
 공백 사실을 그대로 명시한다. 문턱·산식은 연구 폴더 확정 자산 그대로(수정 금지).
 """
-import csv, json, os, io, urllib.request
+import csv, json, os, io, sys, urllib.request
 from datetime import datetime, date, timedelta
 
 D = 'docs/data'
@@ -22,6 +22,15 @@ def load_csv(path):
     if not os.path.exists(path): return []
     with open(path, encoding='utf-8-sig') as f:
         return list(csv.DictReader(f))
+
+_load_csv_raw = load_csv
+ASOF = None  # 정정 12호(2026-10-24): 처리일(today) 이후 관측치 절단 — 백필 시 미래값 유입 차단
+def load_csv(path):
+    rows = _load_csv_raw(path)
+    pp = path.replace(os.sep, '/')
+    if ASOF and ('/ext' in pp or pp.endswith('treasury.csv')) and not any(k in pp for k in ('earnings', 'fomc')):  # 캘린더(미래 일정 파일)는 절단 제외
+        rows = [r for r in rows if (r.get('Date') or r.get('date') or r.get('report_date') or '') <= ASOF]
+    return rows
 
 def save_csv(path, rows, cols):
     allcols = list(cols)
@@ -207,7 +216,26 @@ dealer = sorted((r['report_date'], int(r['dealer_long']) - int(r['dealer_short']
 tre = {r['Date']: (float(r['Y2']), float(r['Y10'])) for r in trows if r.get('Y2')}
 ys = {n: {r['Date']: float(r['Close']) for r in ydata[n]} for n in ydata}
 
-today = dates[-1]; i = idx[today]
+# 정정 12호(2026-10-24, 오류 수정): FRED 최신일 하루만 처리하던 구조 → 스코어카드 미기입 거래일을
+# 오래된 순으로 처리(백필). 잔여가 있으면 종료 코드 10으로 호출자(daily.yml 루프)에 재실행 신호.
+_sc0 = _load_csv_raw(f'{D}/daily_scorecard.csv'); _done = {r['date'] for r in _sc0}
+_start = min(_done) if _done else dates[-1]
+_pending = [d0 for d0 in dates if d0 >= _start and d0 not in _done]
+today = _pending[0] if _pending else dates[-1]; i = idx[today]
+BACKLOG = max(len(_pending) - 1, 0)
+ASOF = today
+if _pending: note(f'백필: 미처리 {len(_pending)}일 중 {today} 처리 (잔여 {BACKLOG})')
+# as-of 절단 — 모든 계기가 today 기준 값만 보도록 (미래 관측치 제거)
+ndx = {k: x for k, x in ndx.items() if k <= today}
+vix = {k: x for k, x in vix.items() if k <= today}
+svr = {k: x for k, x in svr.items() if k <= today}
+pc = {k: x for k, x in pc.items() if k <= today}
+cot = [c for c in cot if c[0] <= today]
+dealer = [c for c in dealer if c[0] <= today]
+tre = {k: x for k, x in tre.items() if k <= today}
+ys = {n: {k: x for k, x in s_.items() if k <= today} for n, s_ in ys.items()}
+epu_hist = [e_ for e_ in epu_hist if e_[0] <= today]
+dix_hist = [e_ for e_ in dix_hist if e_[0] <= today]
 ret1 = 100 * (ndx[today] / ndx[dates[i-1]] - 1)
 cum3 = 100 * (ndx[today] / ndx[dates[i-3]] - 1) if i >= 3 else 0.0
 event = abs(ret1) >= 2 or abs(cum3) >= 5
@@ -687,6 +715,7 @@ if not any(r['date'] == today for r in sc):
                'move_curve_pct': mc_pct,
                'wood': prox_wood if 'prox_wood' in dir() else '', 'fire': prox_fire if 'prox_fire' in dir() else '',
                'jpy5': jpy5, 'jcot_pct': jcot_pct})
+    sc.sort(key=lambda r: r['date'])  # 정정 12호: 백필 행 날짜순
     save_csv(sc_path, sc, list(sc[-1].keys()))
 
 # ==== 대장 자동 채점기 (매일 실행 — 만기 도래분 fwd22 자동 기입) ====
@@ -775,7 +804,7 @@ try:
         return any(r.get('card') == card and r.get('date', '') >= cut for r in led)
     # P9a 적립
     try:
-        sc_rows = load_csv(f'{D}/daily_scorecard.csv')
+        sc_rows = [r for r in load_csv(f'{D}/daily_scorecard.csv') if r.get('date', '') <= today]  # 정정 12호 as-of
         hist = [r for r in sc_rows if r.get('wood') not in (None, '', 'None')][-60:]
         if len(hist) >= 60:
             wd_days = sum(1 for r in hist if float(r['wood']) >= 3)
@@ -979,3 +1008,5 @@ if msg and NTFY:
         note(f'ntfy 실패: {e}')
 
 note(f"완료: {today} ret {ret1:+.2f}% event={event} 판정={monthly['label']}")
+if BACKLOG:
+    print(f'::backlog {BACKLOG}'); sys.exit(10)  # 정정 12호: 잔여 미처리일 → 재실행 신호

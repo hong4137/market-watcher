@@ -23,7 +23,10 @@ jobs:
         run: |
           python pipeline/collect_history.py || echo "ext collect 실패 - 계속"
           python pipeline/collect_stage46.py || echo "earnings collect 실패 - 계속"
-          python pipeline/run_daily.py
+          for n in 1 2 3 4 5 6; do
+            python pipeline/run_daily.py; rc=$?
+            if [ $rc -ne 10 ]; then break; fi   # 정정 12호: 10 = 잔여 미처리일 있음 → 재실행
+          done
       - name: commit results (keepalive 겸용 — 60일 비활성 방지)
         run: |
           git config user.name 'watch-bot'
