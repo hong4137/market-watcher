@@ -66,6 +66,23 @@ try:
 except Exception as e:
     ndx_rows = load_csv(f'{D}/ndx_daily.csv'); note(f"NDX 실패: {e}")
 
+# NDX 보조 원천(야후 ^NDX) — 정정 13호(2026-11-03): FRED가 아직 게시하지 않은 '확정 마감일'만 잠정 보충.
+# 실행 시각(ET) 당일은 장중 부분값이므로 제외. FRED 도착 시 위 upsert(overwrite=True)가 공식값으로 덮어씀.
+NDX_PROV = []
+try:
+    _fl = max(r['Date'] for r in ndx_rows)
+    _et_today = (datetime.utcnow() - timedelta(hours=4)).strftime('%Y-%m-%d')
+    _yj = json.loads(get('https://query1.finance.yahoo.com/v8/finance/chart/%5ENDX?range=1mo&interval=1d'))
+    _yr = _yj['chart']['result'][0]
+    _yp = [(datetime.utcfromtimestamp(t).strftime('%Y-%m-%d'), round(c, 2))
+           for t, c in zip(_yr['timestamp'], _yr['indicators']['quote'][0]['close']) if c]
+    _new = [(d0, c) for d0, c in _yp if _fl < d0 < _et_today]
+    if _new:
+        ndx_rows = upsert(f'{D}/ndx_daily.csv', 'Date', 'Close', _new); NDX_PROV = [d0 for d0, _ in _new]
+        note(f"NDX(야후 잠정) +{len(_new)} ~{_new[-1][0]} — FRED 미게시분, FRED 도착 시 공식값으로 정정")
+except Exception as e:
+    note(f"NDX 보조 원천 실패: {e}")
+
 # VIX — Cboe 공식
 try:
     txt = get('https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv')
@@ -998,6 +1015,16 @@ elif v is not None and v >= 35:
 elif v1y is not None and v1y >= 90:
     msg = f"[국면] {today} VIX 1년 백분위 {v1y} — 상대 공포 국면(#083)"
 
+# 신선도 감시(2026-11-03): 처리일이 실행 시각(ET) 기준 전 영업일보다 뒤지면 지연 경고
+try:
+    _etd = (datetime.utcnow() - timedelta(hours=4)).date(); _exp = _etd - timedelta(days=1)
+    while _exp.weekday() >= 5: _exp -= timedelta(days=1)
+    if today < _exp.isoformat() and BACKLOG == 0:
+        _lag = f"[지연] 처리일 {today} < 기대 {_exp.isoformat()} — 원천 미게시(NDX FRED {max(r['Date'] for r in ndx_rows)})"
+        note(_lag)
+        if msg is None: msg = _lag
+except Exception as e:
+    note(f'신선도 감시 실패: {e}')
 if msg and NTFY:
     try:
         req = urllib.request.Request(f'https://ntfy.sh/{NTFY}', data=msg.encode('utf-8'),

@@ -1,8 +1,17 @@
 name: daily-watch
 on:
   schedule:
-    - cron: '30 10 * * 2-6'   # 화~토 10:30 UTC = 미국 전 거래일 마감 후 (한국 19:30)
-  workflow_dispatch: {}        # 수동 실행 버튼
+    - cron: '30 10 * * 1-6'   # 월~토 10:30 UTC 백업(지연 3~7h). 정시 실행은 Cloudflare 크론(ndx-watch-cron)이 workflow_dispatch로 호출
+  workflow_dispatch:           # 수동 실행 버튼 + Cloudflare 크론 호출
+    inputs:
+      reason:
+        description: '호출 사유 (cf-evening / cf-morning / manual)'
+        required: false
+        default: 'manual'
+
+concurrency:
+  group: daily-watch
+  cancel-in-progress: false   # 겹치면 순차 실행(동일일 재실행 안전)
 
 permissions:
   contents: write
@@ -30,6 +39,12 @@ jobs:
             if [ "$rc" -ne 0 ]; then exit "$rc"; fi   # 그 외 오류는 실패로
             break
           done
+      - name: notify on failure
+        if: failure()
+        env:
+          NTFY_TOPIC: ${{ vars.NTFY_TOPIC }}
+        run: |
+          [ -n "$NTFY_TOPIC" ] && curl -s -H 'Title: NDX watch' -H 'Priority: high' -d "[실행 실패] daily-watch ${{ github.event.inputs.reason || 'schedule' }} $(date -u +%FT%H:%M) — Actions 로그 확인" "https://ntfy.sh/$NTFY_TOPIC" || true
       - name: commit results (keepalive 겸용 — 60일 비활성 방지)
         run: |
           git config user.name 'watch-bot'
