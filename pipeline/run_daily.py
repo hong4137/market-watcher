@@ -222,6 +222,21 @@ try:
 except Exception as e:
     pc_rows = load_csv(f'{D}/equity_pc_bydate.csv'); note(f"P/C 실패: {e}")
 
+# GDELT 일별 뉴스 톤 (2026-11-08 추가, 미검증·관찰): SF연준 감성의 1주 지연 보완 후보. 런당 1요청(제한 1회/5초)
+gdelt7 = None
+try:
+    _gp = f'{D}/ext45/gdelt_tone.csv'; _grows = load_csv(_gp)
+    try:
+        _gj = json.loads(get('https://api.gdeltproject.org/api/v2/doc/doc?query=%22stock%20market%22&mode=timelinetone&timespan=30d&format=json'))
+        _pairs = [(x['date'][:4] + '-' + x['date'][4:6] + '-' + x['date'][6:8], round(float(x['value']), 3)) for x in _gj['timeline'][0]['data']]
+        _grows = upsert(_gp, 'Date', 'Close', _pairs); note(f"GDELT 톤 ok ~{_pairs[-1][0]}")
+    except Exception as e:
+        note(f"GDELT 톤 수집 실패(기존 파일 사용): {str(e)[:60]}")
+    _gd = sorted((r['Date'], float(r['Close'])) for r in _grows if r.get('Close'))
+    if len(_gd) >= 7: gdelt7 = round(sum(x[1] for x in _gd[-7:]) / 7, 2)
+except Exception as e:
+    note(f'GDELT 처리 실패: {e}')
+
 # ============ 2. 계기 계산 (확정 산식 그대로) ============
 ndx = {r['Date']: float(r['Close']) for r in ndx_rows}
 dates = sorted(ndx); idx = {d0: i for i, d0 in enumerate(dates)}
@@ -386,6 +401,23 @@ dn = dealer[-1][1] if dealer else None
 sg = smh_gap(today)
 v1y = vix_1y(today); vj = vix_jump(today)
 move_d, move_c5 = (sorted(ys['move'])[-1], chg_of(ys['move'], sorted(ys['move'])[-1], 5)) if ys.get('move') else (None, None)
+# ---- 추가 열(2026-11-08, 관찰·표시 전용): VXN·기간구조·SMH 당일% — 48·53단계 정합. 문턱 없음 ----
+vxn_v = t9_v = vterm_v = vxn_gap = smh_ret = None
+try:
+    _vxn = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/vxn.csv')}
+    _v9d = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/vix9d.csv')}
+    _v3m = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/vix3m.csv')}
+    def _la(s_):
+        ks_ = sorted(s_); return s_[ks_[-1]] if ks_ else None
+    vxn_v = _la(_vxn); _v9v = _la(_v9d); _v3v = _la(_v3m)
+    if v:
+        t9_v = round(_v9v / v, 3) if _v9v else None
+        vterm_v = round(v / _v3v, 3) if _v3v else None
+        vxn_gap = round(vxn_v - v, 2) if vxn_v is not None else None
+    _sm = ys.get('smh', {}); _sk = sorted(_sm)
+    smh_ret = round(100 * (_sm[_sk[-1]] / _sm[_sk[-2]] - 1), 2) if len(_sk) > 1 else None
+except Exception as e:
+    note(f'추가 열 계산 실패: {e}')
 
 # ============ 3. 칸별 패널 ============
 def gauge(name, val, read, state='na'):
@@ -620,6 +652,7 @@ panels = {
  'C': {'title': 'C 지정학·충격 (78건)', 'grammar': '에너지·통화형=달러 용량계(상관 0.69)·유가 보조. 보건형=VIX 경로만. 방향 비대칭: 고조 달러 0.57 / 완화 방출 0.33(#080).',
    'g': [gauge('달러 당일 %', dxc1, '급등(+0.5↑)=고조 용량 — 하락은 무해(완화·방출 신호)', st(dxc1 is not None and dxc1 >= 0.5, missing=dxc1 is None)),
          gauge('WTI 당일 %', wtc1, '보조 용량계', st(wtc1 is not None and abs(wtc1) >= 3, missing=wtc1 is None)),
+         gauge('뉴스 톤 GDELT 7일 평균 [미검증]', gdelt7, "GDELT 일별 톤('stock market' 기사, 음수=부정). SF연준 감성 지연 보완 후보 — 상관 검증 전 참고만", 'na'),
          gauge('EPU 폭발 게이지', epu_burst_val, f'수준p {epu_lv and round(epu_lv)}·산포p {epu_dp and round(epu_dp)} (2년/1년 이동창) — 95+ 진입=폭발. 단독 중립, 카드19 성분', st(epu_burst_val is not None and epu_burst_val >= 95, missing=epu_burst_val is None)),
          gauge('카드19: 소음·톤·항복 3중', c19_str, f'EPU∪MOVE 폭발 {"ON" if c19_noise else "off"} / mom22 {("%+.1f%%" % mom22) if mom22 is not None else "—"} / 감성p {sent_p and round(sent_p)} — 3중 일치=매수 문법(1개월 +9.9%·2개월 +16.3%, 2018+ 11에피소드 91%). P13 카운트', st(c19_all, missing=mom22 is None))]},
  'D': {'title': 'D 신용·시스템 (5건)', 'grammar': '표본 5건 — 식 검증 불가. 봉인 관찰(32단계): 2020년대 신용 사건 5/5가 한 달 양수(정책 즉시 개입 시대), 항복 축은 VIX가 아니라 MOVE·OFR(SVB는 VIX 23에 MOVE 170), 저VIX 경고·10일 체크포인트 이식 불가.',
@@ -654,6 +687,7 @@ panels = {
    'g': [gauge('VIX', v, '≥28 국면 / ≥35 확진(#072)', st(v is not None and v >= 28, cond_hot=v is not None and v >= 35, missing=v is None)),
          gauge('VIX 1년 백분위', v1y, '≥90 상대 공포 국면(#083)', st(v1y is not None and v1y >= 90, missing=v1y is None)),
          gauge('VIX 상대급변 백분위', vj, '≥95 급변(#083 A2)', st(vj is not None and vj >= 95, missing=vj is None)),
+         gauge('VXN · VIX9D/VIX [관찰]', (f'{vxn_v} · {t9_v}' if vxn_v is not None else None), 'NDX 고유 공포(VXN)와 단기 공포 가격(T9≥1=백워데이션). 53단계 관찰: VIX 28 진입일 T9≥1.10이면 22일 내 VIX 35 도달 6/7 — 판정 아님', 'na'),
          gauge('60일 고점 대비(%)', drawdown, '깊을수록 항복 국면(#033)', st(drawdown is not None and drawdown <= -10, missing=drawdown is None)),
          gauge('MOVE×커브 결합백분위 [탐사]', mc_pct,
                '저VIX 체제 전용 하방 게이지(L2′, in-sample) — ≥90이면 향후 1개월 경계. VIX≥28 국면에선 무효',
@@ -712,6 +746,34 @@ if event:
         note(f'종합 서술 실패: {e}')
 
 # ============ 5. 출력·채점·푸시 ============
+# ==== VER 국면 감시 일정표 (2026-11-08 추가 — 52·53단계 관찰. 판정 아님, 매일 표시) ====
+try:
+    _vd = [d0 for d0 in dates[max(0, i-22):i+1] if (vix.get(d0) or 0) >= 28]
+    if _vd:
+        _entry = _vd[0]; _k = dates.index(_entry); _nday = i - _k
+        _peak = max((vix.get(d0) or 0) for d0 in dates[_k:i+1])
+        _chg = 100 * (ndx[today] / ndx[_entry] - 1)
+        _led = load_csv(f'{D}/forward_count_ledger.csv')
+        _cps = []
+        for r_ in _led:
+            if r_.get('card') != 'AUTO' or r_.get('date', '') < dates[max(0, i-30)]: continue
+            _j = idx.get(r_['date'])
+            if r_.get('fwd10'):
+                _cp10 = f"완료 {float(r_['fwd10']):+.1f}%"
+            else:
+                _cp10 = dates[_j + 10][5:] if (_j is not None and _j + 10 < len(dates)) else '미도래'
+            _cps.append(f"{r_['date'][5:]}→10일 {_cp10}·만기 {r_.get('fwd22_due', '')[5:]}")
+        _tone = ('침울→항복 확인' if (sent_p is not None and sent_p <= 20) else ('멀쩡→미확정(50단계: 60%/+1.8)' if sent_p is not None else '결측'))
+        _miss = [n_ for n_, ok_ in (('소음 폭발', c19_noise), ('항복(−5%)', c19_cap), ('톤 침울', c19_sent)) if not ok_]
+        watch = (f"VER 국면 {_nday}일차(진입 {_entry[5:]}, VIX 피크 {_peak:.0f}{' → #072 확진 도달' if _peak >= 35 else ' → 35 미도달'}) · 진입가 대비 {_chg:+.1f}% · "
+                 f"톤 {sent_p and round(sent_p)} {_tone} · T9 {t9_v} · 체크포인트/만기: {'; '.join(_cps) if _cps else '없음'} · "
+                 f"카드19 결손: {', '.join(_miss) if _miss else '없음(3중 일치)'} · 7일 내 빅테크 실적: {earn7 if earn7 else '없음'}"
+                 f" · 52단계 지도: 첫 진입 후 f22 60%·f44 70%, 급락형은 10일차 전부 음수 후 두 달 회복(n=4) — 관찰")
+        monthly['watch'] = watch
+        monthly['synth'] = ((monthly.get('synth') or '') + (' ▸ ' if monthly.get('synth') else '') + '[VER 감시] ' + watch)
+except Exception as e:
+    note(f'VER 감시 일정표 실패: {e}')
+
 status = {
  'updated_utc': datetime.utcnow().isoformat() + 'Z', 'date': today,
  'ndx': ndx[today], 'ret1_pct': round(ret1, 2), 'cum3_pct': round(cum3, 2),
@@ -731,7 +793,8 @@ if not any(r['date'] == today for r in sc):
                'gex_b': dix_last and round(dix_last[2] / 1e9, 1), 'drawdown60': drawdown,
                'move_curve_pct': mc_pct,
                'wood': prox_wood if 'prox_wood' in dir() else '', 'fire': prox_fire if 'prox_fire' in dir() else '',
-               'jpy5': jpy5, 'jcot_pct': jcot_pct})
+               'jpy5': jpy5, 'jcot_pct': jcot_pct,
+               'vxn': vxn_v, 'vxn_gap': vxn_gap, 't9': t9_v, 'vix_term': vterm_v, 'smh_ret': smh_ret})
     sc.sort(key=lambda r: r['date'])  # 정정 12호: 백필 행 날짜순
     save_csv(sc_path, sc, list(sc[-1].keys()))
 
@@ -742,10 +805,12 @@ try:
     nd_sorted = sorted(ndx); nd_pos = {d0: i for i, d0 in enumerate(nd_sorted)}
     changed = False
     for row_ in led:
+        ev_d = row_.get('date', ''); i0 = nd_pos.get(ev_d)
+        if row_.get('card') == 'AUTO' and i0 is not None and not row_.get('fwd10') and i0 + 10 < len(nd_sorted):  # 10일 체크포인트 자동 기입(2026-11-08 추가)
+            row_['fwd10'] = round(100 * (ndx[nd_sorted[i0 + 10]] / ndx[nd_sorted[i0]] - 1), 2); changed = True
+            note(f"10일 체크포인트: {ev_d} fwd10 {row_['fwd10']:+.2f}%")
         if row_.get('fwd22_actual'): continue
         if row_.get('card') == 'P8_OBS20': continue
-        ev_d = row_.get('date', '')
-        i0 = nd_pos.get(ev_d)
         if i0 is not None and i0 + 22 < len(nd_sorted):
             f22v = round(100 * (ndx[nd_sorted[i0 + 22]] / ndx[nd_sorted[i0]] - 1), 2)
             row_['fwd22_actual'] = f22v; changed = True
