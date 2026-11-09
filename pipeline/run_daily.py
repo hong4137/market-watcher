@@ -806,7 +806,7 @@ try:
     changed = False
     for row_ in led:
         ev_d = row_.get('date', ''); i0 = nd_pos.get(ev_d)
-        if row_.get('card') == 'AUTO' and i0 is not None and not row_.get('fwd10') and i0 + 10 < len(nd_sorted):  # 10일 체크포인트 자동 기입(2026-11-08 추가)
+        if row_.get('card') in ('AUTO', 'CALL') and i0 is not None and not row_.get('fwd10') and i0 + 10 < len(nd_sorted):  # 10일 체크포인트 자동 기입(2026-11-08 추가)
             row_['fwd10'] = round(100 * (ndx[nd_sorted[i0 + 10]] / ndx[nd_sorted[i0]] - 1), 2); changed = True
             note(f"10일 체크포인트: {ev_d} fwd10 {row_['fwd10']:+.2f}%")
         if row_.get('fwd22_actual'): continue

@@ -418,7 +418,7 @@ fetch('data/forward_count_ledger.csv?t='+Date.now()).then(r=>r.text()).then(t=>{
    cells.push(cur); return cells;
  });
  const byDate={};
- rows.forEach(c=>{ if(!byDate[c[0]]) byDate[c[0]]=c; if(c[7]) byDate[c[0]][7]=c[7]; });
+ rows.forEach(c=>{ if(c[3]==='CALL')return; /* 세션 예측 행은 변동일 표에서 제외 */ if(!byDate[c[0]]) byDate[c[0]]=c; if(c[7]) byDate[c[0]][7]=c[7]; });
  const uniq=Object.values(byDate).sort((a,b)=>a[0]<b[0]?1:-1).slice(0,8);
  document.getElementById('ledgerPanel').style.display='block';
  document.getElementById('ledgerT').innerHTML=
@@ -439,7 +439,8 @@ fetch('data/forward_count_ledger.csv?t='+Date.now()).then(r=>r.text()).then(t=>{
   'P9c_CARRY':['엔 캐리 청산 + 공포 국면이 겹치면 석 달 뒤 올랐나','첫 8번 중 6번 이상'],
   'P12_KINK':['부채한도 대치 중 디폴트 공포가 절정일 때 한 달 뒤 올랐나','첫 4번 중 3번 이상'],
   'P13_TRIPLE':['나쁜 뉴스·침울한 분위기·주가 급락이 겹친 날, 한 달 뒤 올랐나','첫 4번 중 3번 이상'],
-  'P14_CAPCLEAN':['빅테크 실적 일정 없이 투매가 시작된 날, 한 달 뒤 올랐나','첫 5번 중 4번 이상']};
+  'P14_CAPCLEAN':['빅테크 실적 일정 없이 투매가 시작된 날, 한 달 뒤 올랐나','첫 5번 중 4번 이상'],
+  'CALL':['세션 판단(예측 일지): 급락 뒤 첫 반등은 되돌려지나 등 사전 등록한 판단','건별 채점 — 맞힘·빗나감 그대로 기록, 합격선 없음']};
  const agg={};
  rows.forEach(c=>{ const k=c[3]; if(!PMETA[k]||/비대상/.test(c[5]||''))return; /* 조건 미달로 기록만 된 날은 세지 않는다 */ if(!agg[k])agg[k]={n:0,done:0,pass:0}; agg[k].n++; if(c[7]!=='')agg[k].done++; if(c[8]==='Y')agg[k].pass++; });
  const pk=Object.keys(PMETA).filter(k=>true);
