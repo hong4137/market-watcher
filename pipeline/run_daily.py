@@ -1051,7 +1051,7 @@ if event:
         ]
         led_p = f'{D}/forward_count_ledger.csv'
         led = load_csv(led_p)
-        if not any(r.get('date') == today for r in led):
+        if not any(r.get('date') == today and r.get('card') == 'AUTO' for r in led):  # 오류 수정(2026-11-10): 같은 날짜의 CALL(세션 예측) 행이 AUTO 행 생성을 막던 충돌
             led.append({'date': today, 'event_ret': round(ret1, 2), 'domain': ('사각지대' if (v or 99) < 28 and ret1 < 0 else ('하락' if ret1 < 0 else '상승')),
                         'card': 'AUTO', 'reading': ' | '.join(cards), 'verdict': '태깅·만기 대기',
                         'fwd22_due': (date(yy_, mm_, dd2) + timedelta(days=32)).isoformat(), 'fwd22_actual': '', 'pass': ''})
