@@ -14,6 +14,12 @@ def get(url, timeout=60):
     return urllib.request.urlopen(req, timeout=timeout).read().decode('utf-8', 'ignore')
 
 def save(name, rows, cols):
+    # 보호(2026-11-11): 원천이 빈·잘린 응답을 주면 기존 파일을 지키고 건너뛴다
+    _p = f'docs/data/ext/{name}.csv'
+    if os.path.exists(_p):
+        with open(_p, encoding='utf-8-sig') as _f: _old = sum(1 for _ in _f) - 1
+        if len(rows) < 0.9 * _old:
+            print(f'{name}: 응답 {len(rows)}행 < 기존 {_old}행의 90% — 덮어쓰기 건너뜀'); return
     with open(f'docs/data/ext/{name}.csv', 'w', newline='', encoding='utf-8-sig') as f:
         w = csv.writer(f); w.writerow(cols); w.writerows(rows)
     print(f'{name}: {len(rows)}행 {rows[0][0] if rows else "-"}~{rows[-1][0] if rows else "-"}')

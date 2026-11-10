@@ -418,7 +418,7 @@ fetch('data/forward_count_ledger.csv?t='+Date.now()).then(r=>r.text()).then(t=>{
    cells.push(cur); return cells;
  });
  const byDate={};
- rows.forEach(c=>{ if(c[3]==='CALL')return; /* 세션 예측 행은 변동일 표에서 제외 */ if(!byDate[c[0]]) byDate[c[0]]=c; if(c[7]) byDate[c[0]][7]=c[7]; });
+ rows.forEach(c=>{ if(c[3]==='CALL'||(c[1]||'')==='')return; /* 사건 행만: 세션 예측·P8(2개월째 수익)·상시 카드 행 제외 */ if(!byDate[c[0]]) byDate[c[0]]=c; if(c[7]) byDate[c[0]][7]=c[7]; });
  const uniq=Object.values(byDate).sort((a,b)=>a[0]<b[0]?1:-1).slice(0,8);
  document.getElementById('ledgerPanel').style.display='block';
  document.getElementById('ledgerT').innerHTML=

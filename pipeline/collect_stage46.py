@@ -12,6 +12,11 @@ for t in ('MSFT','AAPL','NVDA','GOOGL','AMZN','META','TSLA','AVGO'):
         print(t, len(ed))
     except Exception as e: print(t,'실패',e)
 rows=sorted(set(map(tuple,rows)))
-with open('docs/data/ext45/earnings_mag7.csv','w',newline='') as f:
-    w=csv.writer(f); w.writerow(['ticker','date']); w.writerows(rows)
-print('저장', len(rows))
+_p='docs/data/ext45/earnings_mag7.csv'
+_old=(sum(1 for _ in open(_p))-1) if os.path.exists(_p) else 0
+if len(rows) < 0.9*_old:
+    print(f'응답 {len(rows)}행 < 기존 {_old}행의 90% — 기존 파일 유지(2026-11-11 보호)')
+else:
+    with open(_p,'w',newline='') as f:
+        w=csv.writer(f); w.writerow(['ticker','date']); w.writerows(rows)
+    print('저장', len(rows))

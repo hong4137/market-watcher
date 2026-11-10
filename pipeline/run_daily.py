@@ -56,6 +56,21 @@ def upsert(path, datecol, valcol, pairs, overwrite=False):
 log = []
 def note(m): log.append(m); print(m)
 
+# 실행 시각 기준 미국 동부 날짜(UTC-4 고정: 겨울철엔 04~05시 UTC에만 하루 앞서며 그 시각엔 전일 봉이 이미 확정).
+ET_TODAY = (datetime.utcnow() - timedelta(hours=4)).strftime('%Y-%m-%d')
+# 미국 증시 휴장일(NYSE) — 만기 표기·신선도 경보용. 연 1회 수동 갱신.
+US_HOLIDAYS = {'2026-01-01', '2026-01-19', '2026-02-16', '2026-04-03', '2026-05-25', '2026-06-19', '2026-07-03',
+               '2026-09-07', '2026-11-26', '2026-12-25',
+               '2027-01-01', '2027-01-18', '2027-02-15', '2027-03-26', '2027-05-31', '2027-06-18', '2027-07-05',
+               '2027-09-06', '2027-11-25', '2027-12-24'}
+def is_trading_day(t): return t.weekday() < 5 and t.isoformat() not in US_HOLIDAYS
+def add_trading_days(iso, n):
+    t = date.fromisoformat(iso)
+    while n > 0:
+        t += timedelta(days=1)
+        if is_trading_day(t): n -= 1
+    return t.isoformat()
+
 # ============ 1. 수집 (원천별 독립 격리) ============
 # NDX — FRED 공식(겹치는 날짜 정정 덮어쓰기)
 try:
@@ -71,7 +86,7 @@ except Exception as e:
 NDX_PROV = []
 try:
     _fl = max(r['Date'] for r in ndx_rows)
-    _et_today = (datetime.utcnow() - timedelta(hours=4)).strftime('%Y-%m-%d')
+    _et_today = ET_TODAY
     _yj = json.loads(get('https://query1.finance.yahoo.com/v8/finance/chart/%5ENDX?range=1mo&interval=1d'))
     _yr = _yj['chart']['result'][0]
     _yp = [(datetime.utcfromtimestamp(t).strftime('%Y-%m-%d'), round(c, 2))
@@ -98,12 +113,15 @@ except Exception as e:
     vix_rows = load_csv(f'{D}/vix.csv'); note(f"VIX 실패: {e}")
 
 # 야후 계열 — SMH·MOVE·DXY·WTI (실패 시 결측 허용)
-def yahoo(sym, path, rng='3mo'):
+def yahoo(sym, path, rng='6mo'):
+    # 정정 14호(2026-11-11): 실행 당일(ET) 봉은 장중 부분값이므로 저장하지 않고, 지난 날짜는 확정 종가로 덮어쓴다.
+    # (종전: 당일 봉을 overwrite 없이 저장 → 장중 실행 시점 값이 굳음. SMH 42일·MOVE 23일·DXY 35일·WTI 52일 불일치 실측)
     j = json.loads(get(f'https://query1.finance.yahoo.com/v8/finance/chart/{urllib.request.quote(sym)}?range={rng}&interval=1d'))
     res = j['chart']['result'][0]
     pairs = [(datetime.utcfromtimestamp(t).strftime('%Y-%m-%d'), round(c, 3))
              for t, c in zip(res['timestamp'], res['indicators']['quote'][0]['close']) if c]
-    return upsert(path, 'Date', 'Close', pairs)
+    pairs = [(d0, c) for d0, c in pairs if d0 < ET_TODAY]
+    return upsert(path, 'Date', 'Close', pairs, overwrite=True)
 
 ysrc = {'SMH': (f'{D}/smh_daily.csv', 'smh'), '^MOVE': (f'{D}/move.csv', 'move'),
         'DX-Y.NYB': (f'{D}/dxy.csv', 'dxy'), 'CL=F': (f'{D}/wti.csv', 'wti')}
@@ -141,9 +159,15 @@ try:
         try: epu_hist.append((f"{int(r['year'])}-{int(r['month']):02d}-{int(r['day']):02d}", float(r['daily_policy_index'])))
         except Exception: pass
     save_csv(f'{D}/epu.csv', [{'Date': a, 'EPU': b} for a, b in epu_hist[-120:]], ['Date', 'EPU'])
+    if len(epu_hist) > 10000:
+        save_csv(f'{D}/ext/epu_full.csv', [{'Date': a, 'Close': b} for a, b in epu_hist], ['Date', 'Close'])
     note(f"EPU ok ~{epu_hist[-1][0]} (역사 {len(epu_hist)}일)")
 except Exception as e:
-    epu_hist = [(r['Date'], float(r['EPU'])) for r in load_csv(f'{D}/epu.csv')]; note(f"EPU 실패: {e}")
+    _ef = _load_csv_raw(f'{D}/ext/epu_full.csv')
+    if len(_ef) > 10000:
+        epu_hist = [(r['Date'], float(r['Close'])) for r in _ef]; note(f"EPU 실패(보존된 전 역사 {len(_ef)}일 사용): {e}")
+    else:
+        epu_hist = [(r['Date'], float(r['EPU'])) for r in load_csv(f'{D}/epu.csv')]; note(f"EPU 실패(120일 파일 — 백분위 신뢰 낮음): {e}")
 
 # DIX/GEX — squeezemetrics 전 역사
 try:
@@ -229,7 +253,8 @@ try:
     try:
         _gj = json.loads(get('https://api.gdeltproject.org/api/v2/doc/doc?query=%22stock%20market%22&mode=timelinetone&timespan=30d&format=json'))
         _pairs = [(x['date'][:4] + '-' + x['date'][4:6] + '-' + x['date'][6:8], round(float(x['value']), 3)) for x in _gj['timeline'][0]['data']]
-        _grows = upsert(_gp, 'Date', 'Close', _pairs); note(f"GDELT 톤 ok ~{_pairs[-1][0]}")
+        _pairs = [x for x in _pairs if x[0] < datetime.utcnow().strftime('%Y-%m-%d')]  # 진행 중인 날 제외(정정 14호 동형)
+        _grows = upsert(_gp, 'Date', 'Close', _pairs, overwrite=True); note(f"GDELT 톤 ok ~{_pairs[-1][0]}")
     except Exception as e:
         note(f"GDELT 톤 수집 실패(기존 파일 사용): {str(e)[:60]}")
     _gd = sorted((r['Date'], float(r['Close'])) for r in _grows if r.get('Close'))
@@ -262,8 +287,11 @@ ndx = {k: x for k, x in ndx.items() if k <= today}
 vix = {k: x for k, x in vix.items() if k <= today}
 svr = {k: x for k, x in svr.items() if k <= today}
 pc = {k: x for k, x in pc.items() if k <= today}
-cot = [c for c in cot if c[0] <= today]
-dealer = [c for c in dealer if c[0] <= today]
+# 오류 수정(2026-11-11): COT는 화요일 기준·금요일 발표 — report_date ≤ today로 자르면 백필 때 발표 전 보고서가 보임.
+# 처리일−3일로 자르면 실시간(익일 10:40 UTC 실행) 가용 범위와 같다. 엔 COT(ext/jpy_cot)도 동일 적용.
+_cot_cut = (date.fromisoformat(today) - timedelta(days=3)).isoformat()
+cot = [c for c in cot if c[0] <= _cot_cut]
+dealer = [c for c in dealer if c[0] <= _cot_cut]
 tre = {k: x for k, x in tre.items() if k <= today}
 ys = {n: {k: x for k, x in s_.items() if k <= today} for n, s_ in ys.items()}
 epu_hist = [e_ for e_ in epu_hist if e_[0] <= today]
@@ -426,9 +454,9 @@ def st(cond_warn, cond_hot=False, missing=False):
     if missing: return 'na'
     return 'hot' if cond_hot else ('warn' if cond_warn else 'ok')
 
-y2c1 = chg_of(y2, t_last, 1) if t_last else None
+y2c1 = chg_of(y2, today, 1)   # 오류 수정(2026-11-11): 당일 관측 없으면(채권 휴장) None — 전일 변화를 당일로 표시하지 않음
 y2c5 = chg_of(y2, t_last, 5) if t_last else None
-y10c1 = chg_of(y10, t_last, 1) if t_last else None
+y10c1 = chg_of(y10, today, 1)
 y10c5 = chg_of(y10, t_last, 5) if t_last else None
 dxc1 = pchg_of(ys['dxy'], sorted(ys['dxy'])[-1]) if ys.get('dxy') else None
 wtc1 = pchg_of(ys['wti'], sorted(ys['wti'])[-1]) if ys.get('wti') else None
@@ -503,7 +531,7 @@ try:
     _jp = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/usdjpy.csv')}
     _jk = sorted(_jp)
     if len(_jk) > 6: jpy5 = round(100 * (_jp[_jk[-1]] / _jp[_jk[-5]] - 1), 2)
-    _jc = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/jpy_cot.csv')}
+    _jc = {r['Date']: float(r['Close']) for r in load_csv(f'{D}/ext/jpy_cot.csv') if r['Date'] <= _cot_cut}
     _ck = sorted(_jc)
     if len(_ck) > 60:
         _hist = [_jc[k] for k in _ck[-52:]]
@@ -765,7 +793,7 @@ try:
             _cps.append(f"{r_['date'][5:]}→10일 {_cp10}·만기 {r_.get('fwd22_due', '')[5:]}")
         _tone = ('침울→항복 확인' if (sent_p is not None and sent_p <= 20) else ('멀쩡→미확정(50단계: 60%/+1.8)' if sent_p is not None else '결측'))
         _miss = [n_ for n_, ok_ in (('소음 폭발', c19_noise), ('항복(−5%)', c19_cap), ('톤 침울', c19_sent)) if not ok_]
-        watch = (f"VER 국면 {_nday}일차(진입 {_entry[5:]}, VIX 피크 {_peak:.0f}{' → #072 확진 도달' if _peak >= 35 else ' → 35 미도달'}) · 진입가 대비 {_chg:+.1f}% · "
+        watch = (f"VER 진입 후 {_nday}일차·{'국면 지속' if (v or 0) >= 28 else f'현재 VIX {v} — 28 아래'}(진입 {_entry[5:]}, VIX 피크 {_peak:.0f}{' → #072 확진 도달' if _peak >= 35 else ' → 35 미도달'}) · 진입가 대비 {_chg:+.1f}% · "
                  f"톤 {sent_p and round(sent_p)} {_tone} · T9 {t9_v} · 체크포인트/만기: {'; '.join(_cps) if _cps else '없음'} · "
                  f"카드19 결손: {', '.join(_miss) if _miss else '없음(3중 일치)'} · 7일 내 빅테크 실적: {earn7 if earn7 else '없음'}"
                  f" · 52단계 지도: 첫 진입 후 f22 60%·f44 70%, 급락형은 10일차 전부 음수 후 두 달 회복(n=4) — 관찰")
@@ -810,10 +838,12 @@ try:
             row_['fwd10'] = round(100 * (ndx[nd_sorted[i0 + 10]] / ndx[nd_sorted[i0]] - 1), 2); changed = True
             note(f"10일 체크포인트: {ev_d} fwd10 {row_['fwd10']:+.2f}%")
         if row_.get('fwd22_actual'): continue
-        if row_.get('card') == 'P8_OBS20': continue
+        if row_.get('card') in ('P8_OBS20', 'P9a_G', 'P9c_CARRY'): continue  # 오류 수정(2026-11-11): P9a(66일 최대낙폭)·P9c(fwd66)는 아래 전용 채점 — 종전엔 여기서 22일 값이 먼저 들어가 전용 채점이 건너뛰어짐
         if i0 is not None and i0 + 22 < len(nd_sorted):
             f22v = round(100 * (ndx[nd_sorted[i0 + 22]] / ndx[nd_sorted[i0]] - 1), 2)
             row_['fwd22_actual'] = f22v; changed = True
+            if row_.get('card') in ('P12_KINK', 'P13_TRIPLE', 'P14_CAPCLEAN'):  # 등록 판정 = fwd22 양수 — 종전엔 pass가 기입되지 않음
+                row_['pass'] = 'Y' if f22v > 0 else 'N'
             note(f'대장 채점: {ev_d} fwd22 {f22v:+.2f}%')
     if changed:
         save_csv(led_p, led, list(led[0].keys()))
@@ -853,7 +883,7 @@ try:
             led.append({'date': ev_d, 'event_ret': '', 'domain': 'B칸 태깅분만 카운트(그 외 참고)',
                         'card': 'P8_OBS20', 'reading': f'm1 {m1v:+.2f}% · CYC {cycv:+.2f}',
                         'verdict': verdict,
-                        'fwd22_due': (date(yy0, mm0, dd0) + timedelta(days=64)).isoformat(),
+                        'fwd22_due': add_trading_days(ev_d, 44),
                         'fwd22_actual': '', 'pass': ''})
             note(f'P8 OBS-20 분류: {ev_d} m1 {m1v:+.2f}% CYC {cycv:+.2f}')
             changed = True
@@ -896,7 +926,7 @@ try:
                 led.append({'date': today, 'event_ret': '', 'domain': 'D칸 상시(P9a)', 'card': 'P9a_G',
                             'reading': f'장작지속 {wd_days}/60 · 불씨 {cur_fire:.0f}/6',
                             'verdict': '66일 내 최대낙폭 ≥15% 예측 (합격선: 첫 5건 중 2+)',
-                            'fwd22_due': (date(yy0, mm0, dd0) + timedelta(days=96)).isoformat(),
+                            'fwd22_due': add_trading_days(today, 66),
                             'fwd22_actual': '', 'pass': ''})
                 note(f'P9a 적립: 장작 {wd_days}/60 불씨 {cur_fire:.0f}')
                 changed = True
@@ -908,7 +938,7 @@ try:
         led.append({'date': today, 'event_ret': '', 'domain': 'F칸 상시(P12)', 'card': 'P12_KINK',
                     'reading': f'킹크 {kink_v:+.2f}pp · 대치 {standoff}',
                     'verdict': 'fwd22 양수 예측 — 공포 가격 절정 (합격선: 첫 4에피소드 중 3+)',
-                    'fwd22_due': (date(yy0, mm0, dd0) + timedelta(days=32)).isoformat(),
+                    'fwd22_due': add_trading_days(today, 22),
                     'fwd22_actual': '', 'pass': ''})
         note(f'P12 적립: 킹크 {kink_v:+.2f}')
         changed = True
@@ -918,7 +948,7 @@ try:
         led.append({'date': today, 'event_ret': '', 'domain': '전칸 상시(P13)', 'card': 'P13_TRIPLE',
                     'reading': f'폭발 EPU {epu_lv and round(epu_lv)}/{epu_dp and round(epu_dp)} · MOVE {mv_lv and round(mv_lv)}/{mv_dp and round(mv_dp)} · mom22 {mom22:+.1f}% · 감성p {sent_p and round(sent_p)}',
                     'verdict': 'fwd22 양수 예측 — 3중 일치 매수 (합격선: 첫 4에피소드 중 3+)',
-                    'fwd22_due': (date(yy0, mm0, dd0) + timedelta(days=32)).isoformat(),
+                    'fwd22_due': add_trading_days(today, 22),
                     'fwd22_actual': '', 'pass': ''})
         note(f'P13 적립: {c19_str}')
         changed = True
@@ -928,7 +958,7 @@ try:
         led.append({'date': today, 'event_ret': '', 'domain': '전칸 상시(P14)', 'card': 'P14_CAPCLEAN',
                     'reading': f'항복 진입 mom22 {mom22:+.1f}% · 7일 내 빅테크 실적 0건',
                     'verdict': 'fwd22 양수 예측 — 실적 청정 항복 매수 (합격선: 첫 5건 중 4+)',
-                    'fwd22_due': (date(yy0, mm0, dd0) + timedelta(days=32)).isoformat(),
+                    'fwd22_due': add_trading_days(today, 22),
                     'fwd22_actual': '', 'pass': ''})
         note(f'P14 적립: 항복 청정 {mom22:+.1f}%')
         changed = True
@@ -938,7 +968,7 @@ try:
         led.append({'date': today, 'event_ret': '', 'domain': 'D칸 상시(P9c)', 'card': 'P9c_CARRY',
                     'reading': f'JPY5 {jpy5:+.2f}% · VIX {v:.1f}',
                     'verdict': 'fwd66 양수 예측 — 캐리 항복 매수 (합격선: 첫 8건 중 6+)',
-                    'fwd22_due': (date(yy0, mm0, dd0) + timedelta(days=96)).isoformat(),
+                    'fwd22_due': add_trading_days(today, 66),
                     'fwd22_actual': '', 'pass': ''})
         note(f'P9c 적립: JPY5 {jpy5:+.2f} VIX {v:.1f}')
         changed = True
@@ -1009,8 +1039,9 @@ if event:
         y10p7 = _asof(y10h, (date(yy_, mm_, dd2) - timedelta(days=7)).isoformat())
         r10p7 = _asof(r10, (date(yy_, mm_, dd2) - timedelta(days=7)).isoformat())
         bei5 = round(bei_t - (y10p7 - r10p7), 3) if (bei_t is not None and y10p7 is not None and r10p7 is not None) else None
-        y10prev = _asof(y10h, (date(yy_, mm_, dd2) - timedelta(days=4)).isoformat())
-        y10c1 = round(abs(y10t - y10prev), 3) if (y10t is not None and y10prev is not None) else None
+        # 오류 수정(2026-11-11): 종전 '4캘린더일 전' 대비(2~4거래일치) → 재무부 원천 당일 변화(전 관측일 대비)
+        _y10d = chg_of(y10, today, 1)
+        y10c1 = round(abs(_y10d), 3) if _y10d is not None else None
         L6_ok = (bei5 is not None and bei5 >= 0.05) or (y10c1 is not None and y10c1 >= 0.08)
         # R2: 사이클 게이지 + 로테이션 감별
         y2t = None
@@ -1023,7 +1054,7 @@ if event:
         qqe = exd('qqqe'); qq = exd('qqq')
         qgap = None
         try:
-            prevd = (date(yy_, mm_, dd2) - timedelta(days=4)).isoformat()
+            prevd = dates[i-1]  # 오류 수정(2026-11-11): 전 거래일(종전 '4캘린더일 전' = 2~4거래일치)
             qgap = round(100 * (_asof(qqe, today) / _asof(qqe, prevd) - 1) - 100 * (_asof(qq, today) / _asof(qq, prevd) - 1), 2)
         except Exception: pass
         rot = (qgap is not None and qgap > 1) and (sg is not None and sg < 0)
@@ -1054,7 +1085,7 @@ if event:
         if not any(r.get('date') == today and r.get('card') == 'AUTO' for r in led):  # 오류 수정(2026-11-10): 같은 날짜의 CALL(세션 예측) 행이 AUTO 행 생성을 막던 충돌
             led.append({'date': today, 'event_ret': round(ret1, 2), 'domain': ('사각지대' if (v or 99) < 28 and ret1 < 0 else ('하락' if ret1 < 0 else '상승')),
                         'card': 'AUTO', 'reading': ' | '.join(cards), 'verdict': '태깅·만기 대기',
-                        'fwd22_due': (date(yy_, mm_, dd2) + timedelta(days=32)).isoformat(), 'fwd22_actual': '', 'pass': ''})
+                        'fwd22_due': add_trading_days(today, 22), 'fwd22_actual': '', 'pass': ''})
             save_csv(led_p, led, ['date', 'event_ret', 'domain', 'card', 'reading', 'verdict', 'fwd22_due', 'fwd22_actual', 'pass'])
         note('사전등록 카드 판독·대장 기입 완료')
     except Exception as e:
@@ -1082,8 +1113,8 @@ elif v1y is not None and v1y >= 90:
 
 # 신선도 감시(2026-11-03): 처리일이 실행 시각(ET) 기준 전 영업일보다 뒤지면 지연 경고
 try:
-    _etd = (datetime.utcnow() - timedelta(hours=4)).date(); _exp = _etd - timedelta(days=1)
-    while _exp.weekday() >= 5: _exp -= timedelta(days=1)
+    _etd = date.fromisoformat(ET_TODAY); _exp = _etd - timedelta(days=1)
+    while not is_trading_day(_exp): _exp -= timedelta(days=1)
     if today < _exp.isoformat() and BACKLOG == 0:
         _lag = f"[지연] 처리일 {today} < 기대 {_exp.isoformat()} — 원천 미게시(NDX FRED {max(r['Date'] for r in ndx_rows)})"
         note(_lag)
