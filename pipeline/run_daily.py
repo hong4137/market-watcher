@@ -711,32 +711,76 @@ panels = {
          gauge('NSP 52주 백분위', np_, '≥80 과밀 — 딜러 순숏 국면에선 휴면(#082)', 'na' if np_ is None else ('warn' if (np_ >= 80 and dn is not None and dn > 0) else 'ok')),
          gauge('딜러 순포지션', dn, '양수 복귀=NSP 부활 조건(#082)', st(dn is not None and dn < 0, missing=dn is None)),
          gauge('DIX', dix_last and dix_last[1], '높을수록 다크풀 매집', 'na' if dix_last is None else 'ok')]},
- 'REGIME': {'title': '공통 국면', 'grammar': 'VER #001: VIX≥28 하락 사건 → 1개월 반등 84~94%(국면 첫날 68%). 저VIX 캄 크래시 사각(#084)은 아래 탐사 게이지가 감시.',
+ 'REGIME': {'title': '공통 국면', 'grammar': 'VER #001: VIX≥28 하락 사건 → 1개월 반등 재측정 74%(28~35 68%·35+ 86%, 에피소드 첫날 67%=기준선 — 49단계). 저VIX 하락은 P1(후보 등급): 아래 결합백분위 ≥80이면 약세 기울기.',
    'g': [gauge('VIX', v, '≥28 국면 / ≥35 확진(#072)', st(v is not None and v >= 28, cond_hot=v is not None and v >= 35, missing=v is None)),
          gauge('VIX 1년 백분위', v1y, '≥90 상대 공포 국면(#083)', st(v1y is not None and v1y >= 90, missing=v1y is None)),
          gauge('VIX 상대급변 백분위', vj, '≥95 급변(#083 A2)', st(vj is not None and vj >= 95, missing=vj is None)),
          gauge('VXN · VIX9D/VIX [관찰]', (f'{vxn_v} · {t9_v}' if vxn_v is not None else None), 'NDX 고유 공포(VXN)와 단기 공포 가격(T9≥1=백워데이션). 53단계 관찰: VIX 28 진입일 T9≥1.10이면 22일 내 VIX 35 도달 6/7 — 판정 아님', 'na'),
          gauge('60일 고점 대비(%)', drawdown, '깊을수록 항복 국면(#033)', st(drawdown is not None and drawdown <= -10, missing=drawdown is None)),
          gauge('MOVE×커브 결합백분위 [탐사]', mc_pct,
-               '저VIX 체제 전용 하방 게이지(L2′, in-sample) — ≥90이면 향후 1개월 경계. VIX≥28 국면에선 무효',
+               '저VIX 체제 전용 하방 게이지(L2′) — P1 후보 등급(홀드아웃 1차 합격): 하락 사건 시 ≥80이면 약세 기울기. 상시판(≥90 경계)은 P7 시험 중. VIX≥28 국면에선 무효',
                'na' if mc_pct is None else ('warn' if (mc_pct >= 90 and (v is None or v < 28)) else 'ok'))]},
 }
 
-# ============ 4. 1개월 판정 (보유 자산만으로 — 없으면 없다고 명시) ============
-if event and ret1 < 0:
-    if v is not None and v >= 28:
-        first_day = vix.get(dates[i-1], 99) < 28
-        monthly = {'stance': 'BOUNCE', 'label': '반등 우세',
-                   'why': f'VER #001: VIX {v:.1f} ≥28 하락 사건 — 1개월 반등 84~94%' + (' (단, 국면 첫날이라 68% — 즉시 매수 금지 각주 적용)' if first_day else '')}
-    else:
-        monthly = {'stance': 'NO_CALL', 'label': '판정 불가 — 무전조 구간',
-                   'why': f'하락 사건이나 VIX {v if v else "결측"} < 28 — 유일한 1개월 자산(VER #001) 적용 밖. #084 사각. 어떤 등급 자산도 방향을 주장하지 않음.'}
-elif event:
-    monthly = {'stance': 'NO_ASSET', 'label': '상승 사건 — 1개월 자산 없음',
-               'why': 'G 판정식은 원인 분류 전용(#070). 상승 사건의 1개월 예측 자산은 미보유.'}
-else:
-    monthly = {'stance': 'NONE', 'label': '무사건 — 판정 없음',
-               'why': '사건 문턱(±2%/3일 ±5%) 미달. 칸별 계기는 상황 파악용.'}
+# ============ 4. 1개월 기울기 (2026-11-26 사용자 승인 개편) ============
+# 종전: 검증 등급 자산(#001)이 있을 때만 판정, 그 외 '판정 불가/자산 없음'.
+# 개편: 사건마다 '기울기 + 등급 + 과거 확률'을 표시한다. 등급 = VER(검증)·CAND(후보: 사전등록 1차 합격)·OBS(관찰: 참고).
+#       모든 기울기는 대장 AUTO 행의 lean 열에 적립되어 22거래일 뒤 lean_hit로 자동 채점된다. 문턱(28·35·80·20·+0.25)은 기존 자산 그대로.
+GRADE_KO = {'VER': '검증 등급', 'CAND': '후보 등급', 'OBS': '관찰 등급'}
+def lean_call(event, ret1, v, mc_pct, cyc_gap, ep_first, sent_p):
+    """expect: '+' = 22거래일 뒤 양수 기대 / '-' = 음수 기대 / '' = 기울기 없음"""
+    if not event:
+        return {'stance': 'NONE', 'label': '무사건 — 판정 없음', 'grade': '', 'expect': '',
+                'why': '사건 문턱(±2%/3일 ±5%) 미달. 칸별 계기는 상황 파악용.', 'plain': ''}
+    if ret1 < 0:
+        if v is not None and v >= 28:
+            hi = v >= 35
+            tone = ''; tone_p = ''
+            if sent_p is not None:
+                if sent_p <= 20:
+                    tone = f' · 톤 침울(감성p {round(sent_p)}) 동반 = 항복 확인(50단계 관찰: 97%, 독립 3에피소드)'
+                    tone_p = ' 뉴스 분위기도 침울해 항복 신호가 겹칩니다(이 경우 과거 97%, 다만 독립 사례는 3묶음뿐).'
+                else:
+                    tone = f' · 톤 멀쩡(감성p {round(sent_p)}) = 항복 미확인(50단계 관찰: 60%)'
+                    tone_p = ' 뉴스 분위기는 아직 멀쩡해 항복 확인이 덜 됐습니다(이 경우 과거 60%).'
+            return {'stance': 'BOUNCE', 'label': '반등 우세', 'grade': 'VER', 'expect': '+',
+                    'why': (f"VER #001: VIX {v:.1f} ≥28 하락 사건 — 1개월 반등 재측정 {'86%(VIX 35+ 구간, n=28)' if hi else '68%(VIX 28~35 구간, n=50)'}"
+                            f" · VIX≥28 전체 74%(n=78, 49단계 — 원 문구 84~94%는 과대)"
+                            + (' · 에피소드 첫날(직전 20거래일 내 VIX≥28 없음)은 67% = 기준선 수준 — 즉시 매수 금지' if ep_first else ' · 에피소드 진행 중(첫날 아님)')
+                            + tone),
+                    'plain': (f"공포지수 {v:.0f}에서 나온 하락입니다. 과거 이 구간에서는 한 달 뒤 오른 비율이 {'86' if hi else '68'}%였습니다(공포지수 28 이상 전체로는 74%)."
+                              + (' 다만 공포 국면에 막 들어선 첫날은 67%로 평소와 비슷해 서두를 이유가 없습니다.' if ep_first else '')
+                              + tone_p)}
+        if v is not None and mc_pct is not None and mc_pct >= 80:
+            return {'stance': 'BEAR_LEAN', 'label': '약세 기울기', 'grade': 'CAND', 'expect': '-',
+                    'why': (f"P1(후보 등급, 2026-11-26 승인): VIX {v:.1f} <28 하락 + MOVE×커브 결합백분위 {mc_pct} ≥80 — 1개월 양수율 <50% 주장."
+                            " 홀드아웃 1차 합격(대상 5건 중 채점 3건 전부 음수: −6.7·−7.5·−7.6%), 2차 시험 진행 중."
+                            " 한계: 1차 표본이 단일 에피소드(2026-10~11 AI 디레이팅)에 몰림"),
+                    'plain': (f"공포지수는 낮은데({v:.0f}) 채권시장 스트레스가 상위권({mc_pct})인 상태에서 나온 하락입니다. 이 조합은 한 달 뒤가 약했습니다."
+                              " 미리 등록해 둔 규칙이 실전 첫 시험을 통과했습니다(채점된 3번 모두 한 달 뒤 하락)."
+                              " 한 차례 더 시험 중이고, 지금까지 사례가 한 시기에 몰려 있다는 한계가 있습니다.")}
+        if v is not None and mc_pct is not None and mc_pct <= 20:
+            return {'stance': 'SAFE_LEAN', 'label': '회복 기울기', 'grade': 'OBS', 'expect': '+',
+                    'why': f"P1 안전 쪽 주장(관찰 등급 — 홀드아웃 미채점): VIX {v:.1f} <28 하락 + 결합백분위 {mc_pct} ≤20 — 1개월 양수율 ≥70% 주장",
+                    'plain': f"공포지수도 낮고({v:.0f}) 채권시장도 평온한({mc_pct}) 상태의 하락입니다. 이 조합은 한 달 뒤 회복이 우세했습니다. 실전 채점 전이라 참고용입니다."}
+        return {'stance': 'NO_CALL', 'label': '판정 불가 — 계기 중립', 'grade': '', 'expect': '',
+                'why': f"하락 사건이나 VIX {v if v else '결측'} <28(#001 적용 밖)이고 결합백분위 {mc_pct}가 P1 양쪽 문턱(≥80·≤20) 사이 — 어느 등급 자산도 방향을 주장하지 않음.",
+                'plain': '공포지수가 낮은 상태의 하락이고 채권 게이지도 중간이라, 계기가 어느 쪽도 가리키지 않습니다.'}
+    if cyc_gap is not None and cyc_gap > 0.25:
+        return {'stance': 'FADE_LEAN', 'label': '되돌림 기울기', 'grade': 'OBS', 'expect': '-',
+                'why': (f"관찰 등급: 긴축기(Y2−EFFR {cyc_gap:+.2f} > +0.25) 상승 사건 — 긴축 국면의 한 달 뒤 기준선은 양수 40%(−1.61%), 완화기 72%(+2.38%)(카드11, 2022 표본 의존)."
+                        " 무촉매 급등이면 카드18 fake 44%. 판정급 아님 — 추격 금지 쪽 참고"),
+                'plain': "시장이 추가 금리 인상을 가격에 넣고 있는 시기에 나온 급등입니다. 이런 국면에서는 한 달 뒤 오른 비율이 40%로 낮았습니다. 참고용 기울기이며, 추격 매수를 서두르지 말라는 뜻입니다."}
+    if cyc_gap is not None:
+        return {'stance': 'HOLD_LEAN', 'label': '지속 기울기', 'grade': 'OBS', 'expect': '+',
+                'why': f"관찰 등급: 완화·종점기(Y2−EFFR {cyc_gap:+.2f} ≤ +0.25) 상승 사건 — 이 국면의 한 달 뒤 기준선은 양수 72%(+2.38%)(카드11). 판정급 아님",
+                'plain': "금리 인상이 끝났거나 인하기에 나온 급등입니다. 이런 국면에서는 한 달 뒤 72%가 올랐습니다. 참고용 기울기입니다."}
+    return {'stance': 'NO_ASSET', 'label': '상승 사건 — 기울기 없음', 'grade': '', 'expect': '',
+            'why': '사이클 게이지 결측 — 상승 사건의 기울기를 낼 수 없음.', 'plain': '상승 쪽 큰 변동인데 금리 사이클 계기가 비어 있어 기울기를 내지 못했습니다.'}
+
+# 에피소드 첫날 = 직전 20거래일 안에 VIX≥28 종가가 없었던 날(49단계 병합 규칙). 종전 '전일 VIX<28' 정의는 같은 국면 안의 재돌파도 첫날로 셌음.
+ep_first = not any((vix.get(d0) or 0) >= 28 for d0 in dates[max(0, i-20):i])
+monthly = lean_call(event, ret1, v, mc_pct, cyc_gap, ep_first, sent_p)
 
 # ==== 사건일 정직한 종합 (47단계: 검증 계기 → 3축 서술. 판정 아님·판독 보조) ====
 if event:
@@ -749,7 +793,7 @@ if event:
         if jcot_pct is not None and jpy5 is not None and jcot_pct <= 10 and jpy5 <= -3: danger.append('엔 캐리 청산 진행')
         if c20_hold: danger.append(f'빅테크 실적 임박({len(earn7)}건) — 매수 보류 조건')
         rec = []
-        if v is not None and v >= 28: rec.append(f'VIX {v:.0f} 항복 국면(#001 반등 84~94%)')
+        if v is not None and v >= 28: rec.append(f'VIX {v:.0f} 항복 국면(#001 재측정 74~86%)')
         if c19_all: rec.append('카드19 3중 일치(2개월 +16.3%/91%)')
         if c19_cap and earn7 == [] and not c19_all: rec.append('청정 항복(실적 무·P14형 +5.0%/81%)')
         if ret1 < 0 and _mv_abs is not None and _mv_abs < 120 and (mv_lv or 0) < 80: rec.append(f'채권 무발작(MOVE {_mv_abs:.0f}) — 시스템 위험 아님')
@@ -758,13 +802,14 @@ if event:
         if kink_v is not None and standoff is not None and str(standoff).startswith('ON') and kink_v >= 0.2: rec.append(f'킹크 {kink_v:+.2f} 공포 절정(P12 +8.1%/95%)')
         if ret1 < 0:
             if c19_all: stance = '판정급 매수 국면(카드19) — P13 카운트 대상.'
-            elif v is not None and v >= 28: stance = '반등 우세(#001) — 단 국면 첫날이면 즉시 매수 금지.'
+            elif v is not None and v >= 28: stance = '반등 우세(#001, 검증 등급) — 단 에피소드 첫날이면 즉시 매수 금지.'
+            elif monthly.get('stance') == 'BEAR_LEAN': stance = '약세 기울기(P1 후보 등급) — 한 달 뒤 약세 쪽. 경고의 소화를 확인하기 전 관망.'
             elif danger: stance = '경계 우세 — 위 경고의 소화를 확인하기 전 관망.'
             elif len(rec) >= 2: stance = '회복 여지 우세 — 단 판정급 신호 미달, 확신 매수는 아님.'
             elif rec: stance = '약한 회복 여지 — 관망.'
             else: stance = '판독 근거 부족 — 관망.'
         else:
-            stance = '상승 사건 — 원인 미상이면 카드18(무촉매 fake 44%·추격 금지) 우선, 실적·정책발이면 해당 칸 문법.'
+            stance = f"{monthly.get('label')}({GRADE_KO.get(monthly.get('grade'), '등급 없음')}) — 원인 미상이면 카드18(무촉매 fake 44%·추격 금지) 우선, 실적·정책발이면 해당 칸 문법."
         monthly['synth'] = ('하락 연쇄 경고: ' + ('없음 — 공포에 동조할 근거 없음' if not danger else f'{len(danger)}건 ({", ".join(danger)})')
                             + ' / 회복 근거: ' + (', '.join(rec) if rec else '없음')
                             + (f' / 문맥: FOMC {fomc_flag}' if fomc_flag else '')
@@ -845,6 +890,11 @@ try:
             if row_.get('card') in ('P12_KINK', 'P13_TRIPLE', 'P14_CAPCLEAN'):  # 등록 판정 = fwd22 양수 — 종전엔 pass가 기입되지 않음
                 row_['pass'] = 'Y' if f22v > 0 else 'N'
             note(f'대장 채점: {ev_d} fwd22 {f22v:+.2f}%')
+    for row_ in led:  # 기울기 채점(2026-11-26): lean = 'stance|등급|기대부호[|소급]' → fwd22 부호와 대조
+        _ln = (row_.get('lean') or '').split('|')
+        if len(_ln) >= 3 and _ln[2] in ('+', '-') and row_.get('fwd22_actual') not in (None, '') and not row_.get('lean_hit'):
+            row_['lean_hit'] = 'Y' if ((float(row_['fwd22_actual']) > 0) == (_ln[2] == '+')) else 'N'; changed = True
+            note(f"기울기 채점: {row_.get('date')} {_ln[0]} → {row_['lean_hit']}")
     if changed:
         save_csv(led_p, led, list(led[0].keys()))
 except Exception as e:
@@ -1085,6 +1135,7 @@ if event:
         if not any(r.get('date') == today and r.get('card') == 'AUTO' for r in led):  # 오류 수정(2026-11-10): 같은 날짜의 CALL(세션 예측) 행이 AUTO 행 생성을 막던 충돌
             led.append({'date': today, 'event_ret': round(ret1, 2), 'domain': ('사각지대' if (v or 99) < 28 and ret1 < 0 else ('하락' if ret1 < 0 else '상승')),
                         'card': 'AUTO', 'reading': ' | '.join(cards), 'verdict': '태깅·만기 대기',
+                        'lean': f"{monthly.get('stance')}|{monthly.get('grade', '')}|{monthly.get('expect', '')}",
                         'fwd22_due': add_trading_days(today, 22), 'fwd22_actual': '', 'pass': ''})
             save_csv(led_p, led, ['date', 'event_ret', 'domain', 'card', 'reading', 'verdict', 'fwd22_due', 'fwd22_actual', 'pass'])
         note('사전등록 카드 판독·대장 기입 완료')
@@ -1093,7 +1144,7 @@ if event:
     hot = [f"{p['title']}: " + ', '.join(f"{g['name']}={g['val']}" for g in panels[k]['g'] if g['state'] in ('warn', 'hot'))
            for k, p in panels.items() if any(g['state'] in ('warn', 'hot') for g in p['g'])]
     msg = '\n'.join([f"[사건] {today} NDX {ret1:+.2f}% (3일 {cum3:+.2f}%)",
-                     f"1개월 판정: {monthly['label']} — {monthly['why']}",
+                     f"1개월 기울기: {monthly['label']}{(' [' + GRADE_KO[monthly['grade']] + ']') if monthly.get('grade') else ''} — {monthly['why']}",
                      '경계 계기: ' + ('; '.join(hot) if hot else '전 계기 중립 (무전조형)'),
                      '── 사전등록 카드 판독 ──'] + cards +
                     ['다음: 세션 열어 루프 A 태깅 (원인 확정은 리서치로)'])

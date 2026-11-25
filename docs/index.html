@@ -112,7 +112,7 @@ const GNAME={
  'VIX 1년 백분위':['공포 수준 — 지난 1년 대비','0=1년 중 가장 평온, 100=가장 불안. 90 이상이면 경계'],
  'VIX 상대급변 백분위':['오늘 공포가 얼마나 급하게 뛰었나','95 이상이면 역사적 급변 — 무언가 터졌다는 뜻'],
  '60일 고점 대비(%)':['최근 고점에서 얼마나 내려왔나','-10% 이하면 본격 조정 국면'],
- 'MOVE×커브 결합백분위 [탐사]':['채권시장 스트레스 게이지 (실험 중)','주식이 평온해도 채권시장이 불안하면 한 달 뒤가 나빴던 패턴. 90 이상이면 경계 — 단 검증 진행 중인 실험 지표'],
+ 'MOVE×커브 결합백분위 [탐사]':['채권시장 스트레스 게이지 (후보 등급)','주식이 평온해도 채권시장이 불안하면 한 달 뒤가 나빴던 패턴. 하락이 난 날 80 이상이면 약세 기울기 — 미리 등록한 규칙이 실전 첫 시험을 통과, 2차 시험 중'],
  '2Y 당일 변화(pp)':['단기 금리가 오늘 얼마나 움직였나','연준 서프라이즈의 크기. ±0.10 이상이면 큰 충격'],
  '2Y 5일 변화(pp)':['단기 금리 일주일 흐름','금리 기대가 어느 방향으로 재조정 중인가'],
  '10Y 당일 변화(pp)':['장기 금리가 오늘 얼마나 움직였나','성장·인플레 전망의 재조정'],
@@ -228,7 +228,7 @@ const PLAIN={
    :v>-5?`고점에서 ${(-v).toFixed(1)}% 내려와 있습니다 — 일상적인 범위.`
    :v>-10?`고점에서 ${(-v).toFixed(1)}% 내려와 조정 문턱(−10%)에 다가가는 중입니다.`
    :`고점에서 ${(-v).toFixed(1)}% 빠진 본격 조정 국면 — 깊을수록 투매가 나온 뒤인 경우가 많았습니다.`,
- 'MOVE×커브 결합백분위 [탐사]':(v,st,s)=>st==='warn'?`주식은 평온한데 채권시장 불안은 1년 중 상위 ${Math.max(1,100-v)}% 수준입니다. 과거엔 이런 엇갈림 뒤 한 달이 약했습니다 — 아직 검증 중인 신호.`
+ 'MOVE×커브 결합백분위 [탐사]':(v,st,s)=>st==='warn'?`주식은 평온한데 채권시장 불안은 1년 중 상위 ${Math.max(1,100-v)}% 수준입니다. 과거엔 이런 엇갈림 뒤 한 달이 약했습니다 — 실전 첫 시험을 통과한 후보 등급 신호.`
    :(s&&s.vix>=28)?'공포 국면에서는 이 신호를 쓰지 않습니다.':'채권시장 불안이 주식과 크게 엇갈리지 않습니다.',
  '2Y 당일 변화(pp)':(v)=>Math.abs(v)>=0.1?`단기 금리가 하루에 ${sgn(v)}%p 움직였습니다 — 연준 관련 '깜짝 소식'급입니다.`:'단기 금리는 조용합니다.',
  '2Y 5일 변화(pp)':(v)=>v>=0.1?`단기 금리가 일주일 새 ${sgn(v)}%p — 금리 인상(또는 인하 축소) 쪽으로 기대가 이동했습니다.`
@@ -367,18 +367,19 @@ fetch('data/status.json?t='+Date.now()).then(r=>r.json()).then(s=>{
    <div style="text-align:center">${donut(S(s.vix),50,vixColor,'공포지수 VIX')}
    <div class="dim" style="font-size:.68em;margin-top:-4px">28 공포 · 35 폭풍</div></div></div>`;
 
- const m=s.monthly, mc={BOUNCE:'up',NO_CALL:'warn',NO_ASSET:'warn',NONE:'dim'}[m.stance]||'dim';
- const mWhy={BOUNCE:'공포지수 28 이상에서 나온 하락입니다. 과거 이런 때 한 달 뒤 84~94%가 반등했습니다'+(/첫날/.test(m.why||'')?' — 단 공포 국면 첫날은 68%라 서두르지 않습니다.':'.'),
+ const m=s.monthly, mc={BOUNCE:'up',SAFE_LEAN:'up',HOLD_LEAN:'up',BEAR_LEAN:'down',FADE_LEAN:'warn',NO_CALL:'warn',NO_ASSET:'warn',NONE:'dim'}[m.stance]||'dim';
+ const GK={VER:'검증 등급',CAND:'후보 등급',OBS:'관찰 등급'};
+ const mWhy=m.plain||{BOUNCE:'공포지수 28 이상에서 나온 하락입니다. 과거 이런 때 한 달 뒤 84~94%가 반등했습니다'+(/첫날/.test(m.why||'')?' — 단 공포 국면 첫날은 68%라 서두르지 않습니다.':'.'),
    NO_CALL:'공포지수가 낮은 상태에서 나온 하락이라, 한 달 뒤를 말해 줄 검증된 규칙이 없습니다. 방향을 주장하지 않습니다.',
    NO_ASSET:'상승 쪽 큰 변동의 한 달 뒤를 맞힐 검증된 규칙은 아직 없습니다.',
    NONE:'오늘은 큰 변동(하루 ±2% 또는 3일 ±5%)이 없어 한 달 전망을 내지 않습니다. 아래 계기들은 상황 파악용입니다.'}[m.stance]||m.why;
- const mLabel={BOUNCE:'반등 우세',NO_CALL:'판정 불가 — 근거 규칙 없음',NO_ASSET:'상승 급변 — 전망 규칙 없음',NONE:'큰 변동 없음 — 전망할 것 없음'}[m.stance]||m.label;
+ const mLabel=m.grade?`${m.label} · ${GK[m.grade]||m.grade}`:{BOUNCE:'반등 우세',NO_CALL:'판정 불가 — 근거 규칙 없음',NO_ASSET:'상승 급변 — 전망 규칙 없음',NONE:'큰 변동 없음 — 전망할 것 없음'}[m.stance]||m.label;
  document.getElementById('monthly').innerHTML=
-  `<h2>한 달 전망 (검증된 규칙이 있을 때만)</h2><div class="${mc}" style="font-weight:700;font-size:1.05em">${mLabel}</div>
+  `<h2>한 달 전망 — 기울기와 등급</h2><div class="${mc}" style="font-weight:700;font-size:1.05em">${mLabel}</div>
    <div class="note" style="margin-top:3px">${mWhy}</div>
    ${m.synth?`<div class="note" style="margin-top:6px;padding:8px;background:#161b22;border-radius:6px;border-left:3px solid #388bfd"><b>종합</b> (검증된 신호를 기계적으로 묶은 것 — 예측 아님): ${plainify(m.synth)}</div>`:''}
    <details><summary>연구 원문 (전문가용)</summary><div class="note">${m.why}${m.synth?'<br>'+m.synth:''}</div></details>
-   <div class="note dim">※ 전망이 "없음"인 것도 정보입니다 — 근거 없는 낙관/비관을 하지 않는다는 뜻입니다.</div>`;
+   <div class="note dim">※ 등급 읽는 법 — 검증: 과거 전수 검증을 통과한 규칙 / 후보: 미리 등록한 규칙이 실전 첫 시험을 통과 / 관찰: 참고용(틀릴 수 있음). 모든 기울기는 한 달 뒤 실제 결과로 자동 채점되어 아래 성적표에 쌓입니다.</div>`;
 
  if(s.event_cards && s.event_cards.length){
    document.getElementById('cardsPanel').style.display='block';
@@ -451,6 +452,17 @@ fetch('data/forward_count_ledger.csv?t='+Date.now()).then(r=>r.text()).then(t=>{
    const st=a.n===0?'<span class="dim">아직 해당 사례 없음</span>':`발생 ${a.n}번 · 채점 끝 ${a.done} · 맞힘 ${a.pass}`;
    return `<div class="grow"><div style="flex:1"><div class="gname">${m[0]}</div><div class="gread">${m[1]}</div></div><div style="font-size:.85em">${st}</div></div>`;
   }).join('');
+  // ── 기울기 성적표 (2026-11-26): 대장 lean·lean_hit 열 집계
+  const H=lines[0].split(','), iL=H.indexOf('lean'), iH=H.indexOf('lean_hit');
+  if(iL>=0){
+   const LM={BOUNCE:['공포 국면 하락 → 반등 우세','검증 등급'],BEAR_LEAN:['저공포 하락 + 채권 불안 → 약세 기울기','후보 등급'],
+     SAFE_LEAN:['저공포 하락 + 채권 평온 → 회복 기울기','관찰 등급'],FADE_LEAN:['금리 인상기 급등 → 되돌림 기울기','관찰 등급'],HOLD_LEAN:['인상 종료·인하기 급등 → 지속 기울기','관찰 등급']};
+   const la={};
+   rows.forEach(c=>{ const p=(c[iL]||'').split('|'); if(!LM[p[0]])return; const a=la[p[0]]||(la[p[0]]={n:0,done:0,hit:0,retro:0}); a.n++; if(p[3])a.retro++; if(c[iH]==='Y'){a.done++;a.hit++}else if(c[iH]==='N'){a.done++} });
+   const lh=Object.keys(LM).filter(k=>la[k]).map(k=>{ const a=la[k], m=LM[k];
+     return `<div class="grow"><div style="flex:1"><div class="gname">${m[0]}</div><div class="gread">${m[1]}${a.retro?` · 그중 ${a.retro}번은 당시 화면에 없던 기울기를 같은 규칙으로 소급 계산`:''}</div></div><div style="font-size:.85em">표시 ${a.n}번 · 채점 끝 ${a.done} · 맞힘 ${a.hit}</div></div>`; }).join('');
+   if(lh) document.getElementById('pBoardT').innerHTML+=`<div class="note" style="margin:12px 0 6px"><b>기울기 성적표</b> — 큰 변동이 난 날 화면이 말한 방향이 한 달 뒤 맞았는지</div>`+lh;
+  }
  }
 }).catch(()=>{});
 
